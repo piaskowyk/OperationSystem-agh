@@ -1,0 +1,100 @@
+Generate random file: number of block - 9999, blck size - 1
+
+Copy file dane to daneSys1: number of block - 9999, blck size - 1, type - sys
+Real time: 0 s : 161008952 ns, User time 0.000000 s, Kernel time: 0.050000 s
+
+Copy file dane to daneLib1: number of block - 9999, blck size - 1, type - lib
+Real time: 0 s : 570403 ns, User time 0.000000 s, Kernel time: 0.000000 s
+
+Sort file daneSys1: number of block - 9999, blck size - 1, type - sys
+Real time: 17 s : 747604188 ns, User time 3.830000 s, Kernel time: 13.620000 s
+
+Sort file daneLib1: number of block - 9999, blck size - 1, type - lib
+Real time: 1 s : 442418066 ns, User time 0.640000 s, Kernel time: 0.310000 s
+
+-------------------------------------------------------------
+
+Generate random file: number of block - 9999, blck size - 4
+
+Copy file dane to daneSys4: number of block - 9999, blck size - 4, type - sys
+Real time: 0 s : 176084074 ns, User time 0.000000 s, Kernel time: 0.050000 s
+
+Copy file dane to daneLib4: number of block - 9999, blck size - 4, type - lib
+Real time: 0 s : 557137 ns, User time 0.000000 s, Kernel time: 0.000000 s
+
+Sort file daneSys4: number of block - 9999, blck size - 4, type - sys
+Real time: 17 s : 685048976 ns, User time 3.970000 s, Kernel time: 13.410000 s
+
+Sort file daneLib4: number of block - 9999, blck size - 4, type - lib
+Real time: 1 s : 467388067 ns, User time 0.640000 s, Kernel time: 0.320000 s
+
+-------------------------------------------------------------
+
+Generate random file: number of block - 9999, blck size - 512
+
+Copy file dane to daneSys512: number of block - 9999, blck size - 512, type - sys
+Real time: 0 s : 181304661 ns, User time 0.000000 s, Kernel time: 0.060000 s
+
+Copy file dane to daneLib512: number of block - 9999, blck size - 512, type - lib
+Real time: 0 s : 29200949 ns, User time 0.000000 s, Kernel time: 0.000000 s
+
+Sort file daneSys512: number of block - 9999, blck size - 512, type - sys
+Real time: 18 s : 845569490 ns, User time 3.890000 s, Kernel time: 14.640000 s
+
+Sort file daneLib512: number of block - 9999, blck size - 512, type - lib
+Real time: 4 s : 917865007 ns, User time 1.380000 s, Kernel time: 3.050000 s
+
+-------------------------------------------------------------
+
+Generate random file: number of block - 9999, blck size - 1024
+
+Copy file dane to daneSys1024: number of block - 9999, blck size - 1024, type - sys
+Real time: 0 s : 203696627 ns, User time 0.000000 s, Kernel time: 0.060000 s
+
+Copy file dane to daneLib1024: number of block - 9999, blck size - 1024, type - lib
+Real time: 0 s : 57222769 ns, User time 0.000000 s, Kernel time: 0.010000 s
+
+Sort file daneSys1024: number of block - 9999, blck size - 1024, type - sys
+Real time: 19 s : 758066277 ns, User time 4.270000 s, Kernel time: 15.150000 s
+
+Sort file daneLib1024: number of block - 9999, blck size - 1024, type - lib
+Real time: 8 s : 825440128 ns, User time 2.150000 s, Kernel time: 6.180000 s
+
+-------------------------------------------------------------
+
+Generate random file: number of block - 9999, blck size - 4096
+
+Copy file dane to daneSys4096: number of block - 9999, blck size - 4096, type - sys
+Real time: 0 s : 224237514 ns, User time 0.000000 s, Kernel time: 0.060000 s
+
+Copy file dane to daneLib4096: number of block - 9999, blck size - 4096, type - lib
+Real time: 0 s : 229816269 ns, User time 0.000000 s, Kernel time: 0.060000 s
+
+Sort file daneSys4096: number of block - 9999, blck size - 4096, type - sys
+Real time: 28 s : 478682833 ns, User time 4.170000 s, Kernel time: 23.920000 s
+
+Sort file daneLib4096: number of block - 9999, blck size - 4096, type - lib
+Real time: 30 s : 42991764 ns, User time 5.030000 s, Kernel time: 24.469999 s
+
+-------------------------------------------------------------
+
+Generate random file: number of block - 9999, blck size - 8192
+
+Copy file dane to daneSys8192: number of block - 9999, blck size - 8192, type - sys
+Real time: 0 s : 377906473 ns, User time 0.000000 s, Kernel time: 0.090000 s
+
+Copy file dane to daneLib8192: number of block - 9999, blck size - 8192, type - lib
+Real time: 0 s : 466061219 ns, User time 0.010000 s, Kernel time: 0.120000 s
+
+Sort file daneSys8192: number of block - 9999, blck size - 8192, type - sys
+Real time: 43 s : 201756048 ns, User time 4.340000 s, Kernel time: 38.299999 s
+
+Sort file daneLib8192: number of block - 9999, blck size - 8192, type - lib
+Real time: 45 s : 68195725 ns, User time 4.900000 s, Kernel time: 39.360001 s
+
+-------------------------------------------------------------
+
+
+
+Wnioski:
+Dla małych rozmiarów bloków, szybsze są funkcje biblioteczne natomiast wraz z zwiększaniem się rozmiarów bloków szybsze stają się funkcje systemowe.

@@ -1,0 +1,206 @@
+Report for arguments: create_table 10000 search_directory /usr *gimp* tmp_name search_directory /usr Makefile tmp_name search_directory /usr *2* mp_name search_directory /usr/lib *1* tmp_name remove_block 0 remove_block 0 remove_block 0 remove_block 0 
+Array size: 10000
+Number of search operations: 4
+Number of remove operations: 4
+Real time executed program: 14 s
+Real time executed program: 12376972 ns
+Time in user mode executed program: 1.660000 s
+Time in kernel mode executed program: 3.890000 s
+
+Operation: search_directory, Arg: /usr, *gimp*, tmp_name
+	 Real time executed operation: 12 s
+	 Real time executed operation: -368664377 ns
+	 Time in user mode executed operation: 2.370000 s
+	 Time in kernel mode executed operation: 2.370000 s
+
+Operation: search_directory, Arg: /usr, Makefile, tmp_name
+	 Real time executed operation: 1 s
+	 Real time executed operation: 150193816 ns
+	 Time in user mode executed operation: 0.760000 s
+	 Time in kernel mode executed operation: 0.760000 s
+
+Operation: search_directory, Arg: /usr, *2*, mp_name
+	 Real time executed operation: 1 s
+	 Real time executed operation: 125159513 ns
+	 Time in user mode executed operation: 0.690000 s
+	 Time in kernel mode executed operation: 0.690000 s
+
+Operation: search_directory, Arg: /usr/lib, *1*, tmp_name
+	 Real time executed operation: 0 s
+	 Real time executed operation: 105544913 ns
+	 Time in user mode executed operation: 0.070000 s
+	 Time in kernel mode executed operation: 0.070000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Total time for search_directory:
+	 Real time: 14 s
+	 Real time: 12233865 ns
+	 Time in user mode: 3.890000 s
+	 Time in kernel mode: 3.890000 s
+
+Total time for remove_index:
+	 Real time: 0 s
+	 Real time: 0 ns
+	 Time in user mode: 0.000000 s
+	 Time in kernel mode: 0.000000 s
+------------------------------------------------------------
+Report for arguments: create_table 10000 search_directory /usr *gimp* tmp_name search_directory /usr Makefile tmp_name search_directory /usr raport2.txt mp_name search_directory /usr/lib *1* tmp_name remove_block 0 remove_block 0 remove_block 0 remove_block 0 
+Array size: 10000
+Number of search operations: 4
+Number of remove operations: 4
+Real time executed program: 3 s
+Real time executed program: 515245155 ns
+Time in user mode executed program: 1.410000 s
+Time in kernel mode executed program: 2.060000 s
+
+Operation: search_directory, Arg: /usr, *gimp*, tmp_name
+	 Real time executed operation: 1 s
+	 Real time executed operation: 136260630 ns
+	 Time in user mode executed operation: 0.670000 s
+	 Time in kernel mode executed operation: 0.670000 s
+
+Operation: search_directory, Arg: /usr, Makefile, tmp_name
+	 Real time executed operation: 1 s
+	 Real time executed operation: 140901947 ns
+	 Time in user mode executed operation: 0.720000 s
+	 Time in kernel mode executed operation: 0.720000 s
+
+Operation: search_directory, Arg: /usr, raport2.txt, mp_name
+	 Real time executed operation: 1 s
+	 Real time executed operation: 131802812 ns
+	 Time in user mode executed operation: 0.610000 s
+	 Time in kernel mode executed operation: 0.610000 s
+
+Operation: search_directory, Arg: /usr/lib, *1*, tmp_name
+	 Real time executed operation: 0 s
+	 Real time executed operation: 106180040 ns
+	 Time in user mode executed operation: 0.060000 s
+	 Time in kernel mode executed operation: 0.060000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Total time for search_directory:
+	 Real time: 3 s
+	 Real time: 515145429 ns
+	 Time in user mode: 2.060000 s
+	 Time in kernel mode: 2.060000 s
+
+Total time for remove_index:
+	 Real time: 0 s
+	 Real time: 0 ns
+	 Time in user mode: 0.000000 s
+	 Time in kernel mode: 0.000000 s
+------------------------------------------------------------
+Report for arguments: create_table 10000 search_directory /usr *gimp* tmp_name search_directory /usr Makefile tmp_name search_directory /usr raport2.txt mp_name search_directory /usr/lib *1* tmp_name remove_block 0 remove_block 0 remove_block 0 remove_block 0 
+Array size: 10000
+Number of search operations: 4
+Number of remove operations: 4
+Real time executed program: 4 s
+Real time executed program: 18446744073219712918 ns
+Time in user mode executed program: 1.240000 s
+Time in kernel mode executed program: 2.220000 s
+
+Operation: search_directory, Arg: /usr, *gimp*, tmp_name
+	 Real time executed operation: 2 s
+	 Real time executed operation: -859137703 ns
+	 Time in user mode executed operation: 0.700000 s
+	 Time in kernel mode executed operation: 0.700000 s
+
+Operation: search_directory, Arg: /usr, Makefile, tmp_name
+	 Real time executed operation: 1 s
+	 Real time executed operation: 139668649 ns
+	 Time in user mode executed operation: 0.730000 s
+	 Time in kernel mode executed operation: 0.730000 s
+
+Operation: search_directory, Arg: /usr, raport2.txt, mp_name
+	 Real time executed operation: 1 s
+	 Real time executed operation: 122905496 ns
+	 Time in user mode executed operation: 0.730000 s
+	 Time in kernel mode executed operation: 0.730000 s
+
+Operation: search_directory, Arg: /usr/lib, *1*, tmp_name
+	 Real time executed operation: 0 s
+	 Real time executed operation: 106632635 ns
+	 Time in user mode executed operation: 0.060000 s
+	 Time in kernel mode executed operation: 0.060000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Total time for search_directory:
+	 Real time: 4 s
+	 Real time: -489930923 ns
+	 Time in user mode: 2.220000 s
+	 Time in kernel mode: 2.220000 s
+
+Total time for remove_index:
+	 Real time: 0 s
+	 Real time: 0 ns
+	 Time in user mode: 0.000000 s
+	 Time in kernel mode: 0.000000 s

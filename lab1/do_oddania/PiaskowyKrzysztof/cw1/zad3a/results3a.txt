@@ -1,0 +1,212 @@
+> Start test on main_static
+Report for arguments: create_table 500 search_directory /usr/lib *gimp* tmp_name search_directory /usr/lib Makefile tmp_name search_directory /home/mleko *2* mp_name search_directory /usr/lib *1* tmp_name remove_block 0 remove_block 0 remove_block 0 remove_block 0 
+Array size: 500
+Number of search operations: 4
+Number of remove operations: 4
+Real time executed program: 8 s
+Real time executed program: 18446744073646768655 ns
+Time in user mode executed program: 0.690000 s
+Time in kernel mode executed program: 1.680000 s
+
+Operation: search_directory, Arg: /usr/lib, *gimp*, tmp_name
+	 Real time executed operation: 0 s
+	 Real time executed operation: 111990186 ns
+	 Time in user mode executed operation: 0.060000 s
+	 Time in kernel mode executed operation: 0.060000 s
+
+Operation: search_directory, Arg: /usr/lib, Makefile, tmp_name
+	 Real time executed operation: 0 s
+	 Real time executed operation: 96437443 ns
+	 Time in user mode executed operation: 0.070000 s
+	 Time in kernel mode executed operation: 0.070000 s
+
+Operation: search_directory, Arg: /home/mleko, *2*, mp_name
+	 Real time executed operation: 7 s
+	 Real time executed operation: 619156720 ns
+	 Time in user mode executed operation: 1.480000 s
+	 Time in kernel mode executed operation: 1.480000 s
+
+Operation: search_directory, Arg: /usr/lib, *1*, tmp_name
+	 Real time executed operation: 1 s
+	 Real time executed operation: -890641502 ns
+	 Time in user mode executed operation: 0.070000 s
+	 Time in kernel mode executed operation: 0.070000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Total time for search_directory:
+	 Real time: 8 s
+	 Real time: -63057153 ns
+	 Time in user mode: 1.680000 s
+	 Time in kernel mode: 1.680000 s
+
+Total time for remove_index:
+	 Real time: 0 s
+	 Real time: 0 ns
+	 Time in user mode: 0.000000 s
+	 Time in kernel mode: 0.000000 s
+------------------------------------------------------------
+> Start test on main_shared
+Report for arguments: create_table 500 search_directory /usr/lib *gimp* tmp_name search_directory /usr/lib Makefile tmp_name search_directory /home/mleko *2* mp_name search_directory /usr/lib *1* tmp_name remove_block 0 remove_block 0 remove_block 0 remove_block 0 
+Array size: 500
+Number of search operations: 4
+Number of remove operations: 4
+Real time executed program: 1 s
+Real time executed program: 174047217 ns
+Time in user mode executed program: 0.400000 s
+Time in kernel mode executed program: 0.650000 s
+
+Operation: search_directory, Arg: /usr/lib, *gimp*, tmp_name
+	 Real time executed operation: 0 s
+	 Real time executed operation: 99070863 ns
+	 Time in user mode executed operation: 0.060000 s
+	 Time in kernel mode executed operation: 0.060000 s
+
+Operation: search_directory, Arg: /usr/lib, Makefile, tmp_name
+	 Real time executed operation: 0 s
+	 Real time executed operation: 100604556 ns
+	 Time in user mode executed operation: 0.060000 s
+	 Time in kernel mode executed operation: 0.060000 s
+
+Operation: search_directory, Arg: /home/mleko, *2*, mp_name
+	 Real time executed operation: 1 s
+	 Real time executed operation: -132381201 ns
+	 Time in user mode executed operation: 0.470000 s
+	 Time in kernel mode executed operation: 0.470000 s
+
+Operation: search_directory, Arg: /usr/lib, *1*, tmp_name
+	 Real time executed operation: 0 s
+	 Real time executed operation: 106489420 ns
+	 Time in user mode executed operation: 0.060000 s
+	 Time in kernel mode executed operation: 0.060000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Total time for search_directory:
+	 Real time: 1 s
+	 Real time: 173783638 ns
+	 Time in user mode: 0.650000 s
+	 Time in kernel mode: 0.650000 s
+
+Total time for remove_index:
+	 Real time: 0 s
+	 Real time: 0 ns
+	 Time in user mode: 0.000000 s
+	 Time in kernel mode: 0.000000 s
+------------------------------------------------------------
+> Start test on main_dynamic
+Report for arguments: create_table 500 search_directory /usr/lib *gimp* tmp_name search_directory /usr/lib Makefile tmp_name search_directory /home/mleko *2* mp_name search_directory /usr/lib *1* tmp_name remove_block 0 remove_block 0 remove_block 0 remove_block 0 
+Array size: 500
+Number of search operations: 4
+Number of remove operations: 4
+Real time executed program: 1 s
+Real time executed program: 153691092 ns
+Time in user mode executed program: 0.420000 s
+Time in kernel mode executed program: 0.610000 s
+
+Operation: search_directory, Arg: /usr/lib, *gimp*, tmp_name
+	 Real time executed operation: 0 s
+	 Real time executed operation: 98543164 ns
+	 Time in user mode executed operation: 0.050000 s
+	 Time in kernel mode executed operation: 0.050000 s
+
+Operation: search_directory, Arg: /usr/lib, Makefile, tmp_name
+	 Real time executed operation: 0 s
+	 Real time executed operation: 97097547 ns
+	 Time in user mode executed operation: 0.050000 s
+	 Time in kernel mode executed operation: 0.050000 s
+
+Operation: search_directory, Arg: /home/mleko, *2*, mp_name
+	 Real time executed operation: 1 s
+	 Real time executed operation: -148946042 ns
+	 Time in user mode executed operation: 0.450000 s
+	 Time in kernel mode executed operation: 0.450000 s
+
+Operation: search_directory, Arg: /usr/lib, *1*, tmp_name
+	 Real time executed operation: 0 s
+	 Real time executed operation: 106779671 ns
+	 Time in user mode executed operation: 0.060000 s
+	 Time in kernel mode executed operation: 0.060000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 s
+	 Real time executed operation: 0 ns
+	 Time in user mode executed operation: 0.000000 s
+	 Time in kernel mode executed operation: 0.000000 s
+
+Total time for search_directory:
+	 Real time: 1 s
+	 Real time: 153474340 ns
+	 Time in user mode: 0.610000 s
+	 Time in kernel mode: 0.610000 s
+
+Total time for remove_index:
+	 Real time: 0 s
+	 Real time: 0 ns
+	 Time in user mode: 0.000000 s
+	 Time in kernel mode: 0.000000 s
+------------------------------------------------------------
+Wnioski:
+Na podstawie czasów wykonania programu stwierdzam że sposób ładowania programu nie ma wpływu na szybkość wykonania programu.

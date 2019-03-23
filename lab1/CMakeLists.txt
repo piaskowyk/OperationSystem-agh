@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.13)
+project(lab1 C)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+include_directories(lib)
+add_executable(lab1 main.c lib/find_operation.h lib/find_operation.c)

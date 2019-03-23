@@ -1,0 +1,57 @@
+Report for arguments: create_table 123 search_directory /usr/lib *gimp* tmp_name search_directory /usr/lib *gimp1* tmp_name search_directory /usr/lib *gimp2* tmp_name search_directory /usr/lib *gimp3* tmp_name remove_block 0 remove_block 0 remove_block 0 remove_block 0 
+Array size: 123
+Number of search operations: 4
+Number of remove operations: 4
+Real time executed program: 24 ms
+Time in user mode executed program: 10 ms
+Time in kernel mode executed program: 12 ms
+
+Operation: search_directory, Arg: /usr/lib, *gimp*, tmp_name
+	 Real time executed operation: 6 ms
+	 Time in user mode executed operation: 2 ms
+	 Time in kernel mode executed operation: 2 ms
+
+Operation: search_directory, Arg: /usr/lib, *gimp1*, tmp_name
+	 Real time executed operation: 6 ms
+	 Time in user mode executed operation: 3 ms
+	 Time in kernel mode executed operation: 3 ms
+
+Operation: search_directory, Arg: /usr/lib, *gimp2*, tmp_name
+	 Real time executed operation: 6 ms
+	 Time in user mode executed operation: 3 ms
+	 Time in kernel mode executed operation: 3 ms
+
+Operation: search_directory, Arg: /usr/lib, *gimp3*, tmp_name
+	 Real time executed operation: 6 ms
+	 Time in user mode executed operation: 4 ms
+	 Time in kernel mode executed operation: 4 ms
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 ms
+	 Time in user mode executed operation: 0 ms
+	 Time in kernel mode executed operation: 0 ms
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 ms
+	 Time in user mode executed operation: 0 ms
+	 Time in kernel mode executed operation: 0 ms
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 ms
+	 Time in user mode executed operation: 0 ms
+	 Time in kernel mode executed operation: 0 ms
+
+Operation: remove_index, Arg: 0
+	 Real time executed operation: 0 ms
+	 Time in user mode executed operation: 0 ms
+	 Time in kernel mode executed operation: 0 ms
+
+Total time for search_directory:
+	 Real time: 24 ms
+	 Time in user mode: 12 ms
+	 Time in kernel mode: 12 ms
+
+Total time for remove_index:
+	 Real time: 0 ms
+	 Time in user mode: 0 ms
+	 Time in kernel mode: 0 ms
