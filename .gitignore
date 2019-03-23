@@ -3,3 +3,4 @@
 *.a
 */.idea
 */cmake-build-debug
+.vscode
