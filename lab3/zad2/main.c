@@ -1,12 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-#include <sys/times.h>
-#include <time.h>
-#include <zconf.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <libgen.h>
@@ -28,7 +26,7 @@ int main(int argc, char *argv[]) {
     int mode = 0;
     char *end;
 
-    if(argc <= 1){
+    if(argc < 4){
         fputs("Not enough input arguments.\n", stderr);
         exit(100);
     }
@@ -40,10 +38,10 @@ int main(int argc, char *argv[]) {
     }
     else {
         validInput = 0;
-        fputs("Invalid input arguments.\n", stderr);
     }
 
     if(!validInput){
+        fputs("Invalid input arguments.\n", stderr);
         exit(101);
     }
 
@@ -201,8 +199,6 @@ int watcherCopyViaProg(struct WatchingItem watchingItem, int monitoringTime){
 }
 
 int watcherCopyViaCmd(struct WatchingItem watchingItem, int monitoringTime){
-    printf("%s | %d | %d\n", watchingItem.pathToFile, watchingItem.interval, monitoringTime);
-
     int howCopies = -1;
     __time_t lastTimeMod = 0;
     char* fileName = basename(watchingItem.pathToFile);
