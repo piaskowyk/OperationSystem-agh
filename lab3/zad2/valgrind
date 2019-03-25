@@ -1,1 +1,0 @@
-gcc -Wall main.c -o main && valgrind --leak-check=full --show-leak-kinds=all ./main lista.txt 10 1

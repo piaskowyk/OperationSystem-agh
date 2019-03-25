@@ -1,13 +1,12 @@
 compile_command = gcc -Wall
 
-all: main
+all: main tester
 
 main: main.c
-	$(compile_command) -c main.c -o main.o
-	$(compile_command) main.o -o ./main
+	$(compile_command) main.c -o ./main
 
-clean_all:
-	rm -rf *.o dane* main raport1.txt
+tester: tester.c
+	$(compile_command) tester.c -o ./tester
 
 clean:
-	rm -rf *.o
+	rm -rf main tester ./archiwum ./tmp lista.txt
