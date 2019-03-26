@@ -29,6 +29,11 @@ int main(int argc, char *argv[], char *env[]) {
         search_cmd.path = realpath(argv[1], NULL);
         main_path = realpath(argv[1], NULL);
 
+        if(!search_cmd.path || !main_path){
+            fputs("Path to directory not exist.\n", stderr);
+            exit(102);
+        }
+
         if(strncmp(argv[2], "<", 1) == 0) {
             search_cmd.type = -1;
         }
@@ -110,6 +115,8 @@ int search(struct Search_cmd search_cmd) {
             }
 
             char* path = realpath(dir->d_name, NULL);
+            if(!path) continue;
+
             char* type_name = recognized_type(file_info.st_mode);
 
             if(showInfo){

@@ -264,7 +264,7 @@ int watcherCopyViaCmd(struct WatchingItem watchingItem, int monitoringTime){
         sleep(watchingItem.interval);
     }
 
-    return howCopies;
+    return howCopies + 1;
 }
 
 void clean(struct WatchingItem* watchingItem, int howItem, pid_t* process){

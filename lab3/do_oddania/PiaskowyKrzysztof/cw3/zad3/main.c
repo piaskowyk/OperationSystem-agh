@@ -10,9 +10,6 @@
 #include <libgen.h>
 #include <sys/resource.h>
 
-//TODO: sprawdzić kody błędów czy na pewno ok się zwracają
-//TODO: tester dziwne rzeczy generuje
-
 struct WatchingItem {
     char* pathToFile;
     unsigned int interval;

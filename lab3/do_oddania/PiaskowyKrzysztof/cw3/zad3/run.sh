@@ -24,7 +24,7 @@ echo ""
 
 echo -e "\e[32mStarting main with mode 0 - with restric limit\e[39m"
 ./main ./lista.txt 15 0 10 1
-echo -e "\e[Starting main with mode 1 - with restric limit\e[39m"
+echo -e "\e[32mStarting main with mode 1 - with restric limit\e[39m"
 ./main ./lista.txt 15 1 1 1
 
 killall -9 tester

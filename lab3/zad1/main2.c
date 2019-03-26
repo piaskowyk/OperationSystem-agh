@@ -48,6 +48,10 @@ int main(int argc, char *argv[]) {
 
         if(valid_input){
             main_path = realpath(argv[1], NULL);
+            if(!main_path){
+                fputs("Path to directory not exist.\n", stderr);
+                exit(102);
+            }
             nftw(argv[1], print_info, 100, FTW_PHYS);
         }
 
@@ -154,6 +158,8 @@ char* recognized_type(int type){
 
 
 char* abs_to_rel(char* path){
+    if(!path) return "unresolved";
+
     int diff = (int)(strlen(path) - strlen(main_path));
     int main_path_len = (int)strlen(main_path);
     if(diff > 0) {

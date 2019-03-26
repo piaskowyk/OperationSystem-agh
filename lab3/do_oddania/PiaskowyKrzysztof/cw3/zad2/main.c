@@ -179,7 +179,6 @@ int watcherCopyViaProg(struct WatchingItem watchingItem, int monitoringTime){
         struct stat file_info;
         stat(watchingItem.pathToFile, &file_info);
         if(lastTimeMod < file_info.st_mtime){
-            printf("Create new backup of file: %s\n", watchingItem.pathToFile);
             howCopies++;
             lastTimeMod = file_info.st_mtime;
 
@@ -221,6 +220,7 @@ int watcherCopyViaProg(struct WatchingItem watchingItem, int monitoringTime){
             lastFileContent = calloc((size_t )lastFileSize, sizeof(char));
             fread(lastFileContent, (size_t )lastFileSize, sizeof(char), watchingFile);
             fclose(watchingFile);
+            printf("Create new backup of file: %s\n", watchingItem.pathToFile);
         }
         //czekaj do następnego sprawdzenia daty
         sleep(watchingItem.interval);
@@ -264,7 +264,7 @@ int watcherCopyViaCmd(struct WatchingItem watchingItem, int monitoringTime){
         sleep(watchingItem.interval);
     }
 
-    return howCopies;
+    return howCopies + 1;
 }
 
 void clean(struct WatchingItem* watchingItem, int howItem, pid_t* process){
