@@ -216,7 +216,7 @@ int watcherCopyViaProg(struct WatchingItem watchingItem, int monitoringTime, con
             char date[21];
             strftime(date, 21, "_%d-%m-%Y_%H:%M:%S", localtime(&now));
             size_t fileNameLen  = strlen(fileName);
-            size_t backupNameLen = fileNameLen + 21;
+            size_t backupNameLen = fileNameLen + 21 + 11;
             char* backupName = calloc(backupNameLen, sizeof(char));
             memcpy(backupName, "./archiwum/", 11);
             memcpy(backupName + 11, fileName, fileNameLen);
