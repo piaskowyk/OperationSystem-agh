@@ -1,5 +1,7 @@
 compile_command = gcc -Wall
 
+all: main1 main2
+
 main1: main1.c
 	$(compile_command) main1.c -o ./main1
 
