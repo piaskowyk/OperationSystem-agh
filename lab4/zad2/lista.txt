@@ -1,0 +1,2 @@
+./tmp/a.txt 2
+./tmp/b.txt 4
