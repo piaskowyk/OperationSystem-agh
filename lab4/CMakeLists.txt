@@ -3,4 +3,4 @@ project(lab4 C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(lab4 zad3a/catcher.c)
+add_executable(lab4 zad3a/sender.c)

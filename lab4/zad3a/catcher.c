@@ -25,14 +25,13 @@ int main(int argc, char *argv[]) {
     }
 
     if(!valid_input){
-        fputs("Invalid input arguments.\n", stderr);
+        fputs("\033[1;33mCatcher:\033[0m Invalid input arguments.\n", stderr);
         exit(101);
     }
 
     //blocking signals
     sigset_t blockMask;
     sigset_t blockMaskRT;
-    sigset_t oldMask;
     sigset_t blockInHandler;
     sigset_t blockInHandlerRT;
 
@@ -62,7 +61,7 @@ int main(int argc, char *argv[]) {
 
     if(mode == 1 || mode == 2){
         if (sigprocmask(SIG_SETMASK, &blockMask, NULL) < 0) {
-            fputs("Unable to set block signal\n", stderr);
+            fputs("\033[1;33mCatcher:\033[0m Unable to set block signal\n", stderr);
             exit(101);
         }
 
@@ -75,7 +74,7 @@ int main(int argc, char *argv[]) {
     }
     else if(mode == 3){
         if (sigprocmask(SIG_SETMASK, &blockMaskRT, NULL) < 0) {
-            fputs("Unable to set block signal\n", stderr);
+            fputs("\033[1;33mCatcher:\033[0m Unable to set block signal\n", stderr);
             exit(101);
         }
 
@@ -87,7 +86,7 @@ int main(int argc, char *argv[]) {
         sigaction(SIGRTMIN+2, &actionSender, NULL);
     }
 
-    printf("Catcher PID: %d\n", getpid());
+    printf("\033[1;33mCatcher:\033[0m Catcher PID: %d\n", getpid());
 
     while(1) {
         pause();
@@ -98,13 +97,13 @@ int main(int argc, char *argv[]) {
 
 void handleReceiver(int signalNumber, siginfo_t *signal, void *data) {
     sigusr1Count++;
-    printf("Receive %i signal no: %i, from process with pid: %i\n", sigusr1Count, signalNumber, signal->si_pid);
+    printf("\033[1;33mCatcher:\033[0m Receive signal: %i, no %i, from process with pid: %i\n", signalNumber, sigusr1Count, signal->si_pid);
 }
 
 void handleSender(int signalNumber, siginfo_t *signal, void *data) {
-    printf("Receive END_SIGNAL from process with pid: %d\n", signal->si_pid);
-    printf("Catcher receive %d signals.\n", sigusr1Count);
-    printf("Catcher start sending signals to Sender.\n");
+    printf("\033[1;33mCatcher:\033[0m Receive END_SIGNAL from process with pid: %d\n", signal->si_pid);
+    printf("\033[1;33mCatcher: Catcher receive %d signals.\033[0m\n", sigusr1Count);
+    printf("\033[1;33mCatcher:\033[0m Catcher start sending signals to Sender.\n");
 
     for (int i = 0; i < signalNumber; ++i) {
         if(mode == 1) {
@@ -115,22 +114,28 @@ void handleSender(int signalNumber, siginfo_t *signal, void *data) {
             signalValue.sival_int = i + 1;
 
             if(sigqueue(signal->si_pid, SIGUSR1, signalValue) == 0) {
-                printf("Send %d signal to Sender.\n", i+1);
+                printf("\033[1;33mCatcher:\033[0m Send %d signal to Sender.\n", i+1);
             } else {
-                fputs("Unable to send signal to Sender.\n", stderr);
+                fputs("\033[1;33mCatcher:\033[0m Unable to send signal to Sender.\n", stderr);
             }
         }
         else if(mode == 3){
             kill(signal->si_pid, SIGRTMIN+1);
         }
+        printf("\033[1;32mSender:\033[0m Sent signal no: %i.\n", i +1);
     }
 
-    if(mode == 1 || mode == 2) {
+    if(mode == 1){
         kill(signal->si_pid, SIGUSR2);
+    }
+    else if(mode == 2) {
+        union sigval signalValue;
+        signalValue.sival_int = 0;
+        sigqueue(signal->si_pid, SIGUSR1, signalValue);
     }
     else if(mode == 3) {
         kill(signal->si_pid, SIGRTMIN+2);
     }
 
-    printf("End sending signal to Sender.\n");
+    printf("\033[1;33mCatcher:\033[0m End sending signal to Sender.\n");
 }
