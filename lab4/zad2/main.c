@@ -45,18 +45,21 @@ int main(int argc, char *argv[]) {
     struct sigaction action;
     action.sa_handler = handleSIGINT;
     sigemptyset(&action.sa_mask);
+    sigaddset(&action.sa_mask, SIGINT); 
     action.sa_flags = 0;
     sigaction(SIGINT, &action, NULL);
 
     struct sigaction actionSU1;
     actionSU1.sa_handler = handleSIGUSR1;
     sigemptyset(&actionSU1.sa_mask);
+    sigaddset(&actionSU1.sa_mask, SIGUSR1); 
     actionSU1.sa_flags = 0;
     sigaction(SIGUSR1, &actionSU1, NULL);
 
     struct sigaction actionSU2;
     actionSU2.sa_handler = handleSIGUSR2;
     sigemptyset(&actionSU2.sa_mask);
+    sigaddset(&actionSU2.sa_mask, SIGUSR2); 
     actionSU2.sa_flags = 0;
     sigaction(SIGUSR2, &actionSU2, NULL);
 

@@ -15,6 +15,8 @@ int main(int argc, char *argv[], char *env[]) {
 
     struct sigaction actionStruct;
     actionStruct.sa_handler = handleSIGTSTP;
+    sigemptyset(&actionStruct.sa_mask); 
+    sigaddset(&actionStruct.sa_mask, SIGTSTP); 
     actionStruct.sa_flags = 0;
     sigaction(SIGTSTP, &actionStruct, NULL); 
 

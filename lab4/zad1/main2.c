@@ -22,6 +22,8 @@ int main(int argc, char *argv[], char *env[]) {
 
     struct sigaction actionStruct;
     actionStruct.sa_handler = handleSIGTSTP;
+    sigemptyset(&actionStruct.sa_mask); 
+    sigaddset(&actionStruct.sa_mask, SIGTSTP); 
     actionStruct.sa_flags = 0;
     sigaction(SIGTSTP, &actionStruct, NULL); 
     
@@ -42,14 +44,24 @@ int main(int argc, char *argv[], char *env[]) {
 void handleSIGTSTP(int signalNumber) {
     printf(" - Oczekuję na CTRL+Z - kontynuacja albo CTR+C - zakończenie programu\n");
     if(run == 0) run = 1;
-    else run = 0;
-    kill(pid, SIGTSTP);
+    else {
+        run = 0;
+        kill(pid, SIGTSTP);
+    }
 }
 
 void handleSIGINT(int signalNumber) {
+    sigset_t newmask;
+    sigset_t oldmask;
+    sigemptyset(&newmask);
+    sigaddset(&newmask, SIGINT);
+    if (sigprocmask(SIG_BLOCK, &newmask, &oldmask) < 0) perror("Nie udało się zablokować sygnału");
+
     printf(" - Odebrano sygnał SIGINT\n");
     kill(pid, SIGINT);
     exit(signalNumber);
+
+    if (sigprocmask(SIG_SETMASK, &newmask, NULL) < 0) perror("Nie udało się przywrócić maski sygnałów");
 }
 
 int check_file_exists(const char * filename){

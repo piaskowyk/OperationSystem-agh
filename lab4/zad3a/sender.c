@@ -123,7 +123,9 @@ void handleSignalFromCatcher(int signalNumber, siginfo_t *signal, void *data) {
 void handleEndSignal(int signalNumber, siginfo_t *signal, void *data) {
     printf("\033[1;32mSender:\033[0m Receive END_SIGNAL from Catcher\n");
     printf("\033[1;32mSender: Sender receive %d signals.\033[0m\n", receivedSignalsCount);
-    printf("\033[1;32mSender:\033[0m END PROGRAM\n");
+    if(mode == 2){
+        printf("\033[1;32mSender:\033[0m Sender receive %d of %d signals.\n", receivedSignalsCount, signal->si_int);
+    }
     exit(0);
 }
 

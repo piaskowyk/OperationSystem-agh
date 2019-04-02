@@ -9,7 +9,7 @@
 #include <sys/wait.h>
 #include <libgen.h>
 
-int sigusr1Count = 0;
+int sigCount = 0;
 int mode = 0;
 
 void handleReceiver(int signalNumber, siginfo_t *si, void *data);
@@ -96,16 +96,16 @@ int main(int argc, char *argv[]) {
 }
 
 void handleReceiver(int signalNumber, siginfo_t *signal, void *data) {
-    sigusr1Count++;
-    printf("\033[1;33mCatcher:\033[0m Receive signal: %i, no %i, from process with pid: %i\n", signalNumber, sigusr1Count, signal->si_pid);
+    sigCount++;
+    printf("\033[1;33mCatcher:\033[0m Receive signal: %i, no %i, from process with pid: %i\n", signalNumber, sigCount, signal->si_pid);
 }
 
 void handleSender(int signalNumber, siginfo_t *signal, void *data) {
     printf("\033[1;33mCatcher:\033[0m Receive END_SIGNAL from process with pid: %d\n", signal->si_pid);
-    printf("\033[1;33mCatcher: Catcher receive %d signals.\033[0m\n", sigusr1Count);
+    printf("\033[1;33mCatcher: Catcher receive %d signals.\033[0m\n", sigCount);
     printf("\033[1;33mCatcher:\033[0m Catcher start sending signals to Sender.\n");
 
-    for (int i = 0; i < signalNumber; ++i) {
+    for (int i = 0; i < sigCount; ++i) {
         if(mode == 1) {
             kill(signal->si_pid, SIGUSR1);
         }
@@ -114,7 +114,7 @@ void handleSender(int signalNumber, siginfo_t *signal, void *data) {
             signalValue.sival_int = i + 1;
 
             if(sigqueue(signal->si_pid, SIGUSR1, signalValue) == 0) {
-                printf("\033[1;33mCatcher:\033[0m Send %d signal to Sender.\n", i+1);
+                printf("\033[1;33mCatcher:\033[0m Send signal no %d to Sender.\n", i+1);
             } else {
                 fputs("\033[1;33mCatcher:\033[0m Unable to send signal to Sender.\n", stderr);
             }
@@ -122,7 +122,6 @@ void handleSender(int signalNumber, siginfo_t *signal, void *data) {
         else if(mode == 3){
             kill(signal->si_pid, SIGRTMIN+1);
         }
-        printf("\033[1;32mSender:\033[0m Sent signal no: %i.\n", i +1);
     }
 
     if(mode == 1){
@@ -130,8 +129,8 @@ void handleSender(int signalNumber, siginfo_t *signal, void *data) {
     }
     else if(mode == 2) {
         union sigval signalValue;
-        signalValue.sival_int = 0;
-        sigqueue(signal->si_pid, SIGUSR1, signalValue);
+        signalValue.sival_int = sigCount;
+        sigqueue(signal->si_pid, SIGUSR2, signalValue);
     }
     else if(mode == 3) {
         kill(signal->si_pid, SIGRTMIN+2);
