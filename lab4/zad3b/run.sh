@@ -12,7 +12,7 @@ echo "Starting catcher"
 ./catcher 1 &
 catcherPid=$(pidof catcher)
 echo "Starting sender"
-./sender $catcherPid 3 1
+./sender $catcherPid 10000 1
 
 echo ""
 echo "----------------------------------------------------"
@@ -23,7 +23,7 @@ echo "Starting catcher"
 ./catcher 2 &
 catcherPid=$(pidof catcher)
 echo "Starting sender"
-./sender $catcherPid 3 2
+./sender $catcherPid 10000 2
 
 echo ""
 echo "----------------------------------------------------"
@@ -34,7 +34,7 @@ echo "Starting catcher"
 ./catcher 3 &
 catcherPid=$(pidof catcher)
 echo "Starting sender"
-./sender $catcherPid 3 3
+./sender $catcherPid 10000 3
 
 echo ""
 echo "THE END OD TESTS"
