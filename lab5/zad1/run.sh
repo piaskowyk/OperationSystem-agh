@@ -1,7 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-while [ 1 ]
-do
-  date
-  sleep 1
-done
+make clean
+make
+
+echo "Start:"
+./main commands.txt
+echo "End"

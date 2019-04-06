@@ -1,12 +1,12 @@
 compile_command = gcc -Wall
 
-all: main1 main2
+all: main
 
-main1: main1.c
-	$(compile_command) main1.c -o ./main1
+main1: main.c
+	$(compile_command) main.c -o ./main
 
-main2: main2.c
-	$(compile_command) main2.c -o ./main2
+test: main.c
+	gcc ./main.c -Wall -g -O0 -o ./test_main
 
 clean:
-	rm -rf *.o main1 main2
+	rm -rf *.o main test_main
