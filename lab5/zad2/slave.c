@@ -39,7 +39,7 @@ int main(int argc, char *argv[], char *env[]) {
         char* buffer = calloc(31, sizeof(char));
         FILE* fileDate = popen("date", "r");
         fread(buffer, sizeof(char), 30, fileDate);
-        fclose(fileDate);
+        pclose(fileDate);
 
         char output[40];
         sprintf(output, "\t%d:\t%s", getpid(), buffer);

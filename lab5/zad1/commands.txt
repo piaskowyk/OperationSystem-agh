@@ -1,2 +1,3 @@
-echo mleko_okelm | cat | cat | grep mleko
-echo mleko123 | cat | cat | grep mleko123
+echo napis | cat | cat | cat | grep na
+echo napis123 | cat | cat | grep napis
+ls -la | tail -10 | grep root | grep a | cat

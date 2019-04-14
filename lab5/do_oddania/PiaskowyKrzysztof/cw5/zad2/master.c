@@ -23,17 +23,15 @@ int main(int argc, char *argv[], char *env[]) {
     //creating naming pipe
     mkfifo(pathToPipe, 0666);
 
+    FILE* pipe = fopen(pathToPipe, "r");
     while(1){
-        FILE* pipe = fopen(pathToPipe, "r");
         char* buffer = calloc(41, sizeof(char));
 
         while (fread(buffer, sizeof(char), 40, pipe) > 0){
             printf("\033[1;32mMaster:\033[0m%s", buffer);
         }
 
-        fclose(pipe);
         free(buffer);
-        sleep(1);
     }
 
     return 0;

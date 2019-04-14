@@ -23,13 +23,13 @@ struct StringArray{
 struct StringArray explode(char* string, long len, char delimer);
 void cleanStringArray(struct StringArray items);
 void cleanAll(
-                struct StringArray items, 
-                struct CommandArgs* commands, 
-                unsigned int commandCount, 
-                char* commandsFileContent,
-                pid_t* process,
-                int** pipeDescriptor
-            );
+        struct StringArray items,
+        struct CommandArgs* commands,
+        unsigned int commandCount,
+        char* commandsFileContent,
+        pid_t* process,
+        int** pipeDescriptor
+);
 void executeLine(char* line, int len);
 
 int main(int argc, char *argv[], char *env[]) {
@@ -99,7 +99,9 @@ struct StringArray explode(char* string, long len, char delimer) {
 
     itemsCount++;
     for(long i = 0; i < len; i++){
-        if(string[i] == delimer) itemsCount++;
+        if(string[i] == delimer) {
+            itemsCount++;
+        }
     }
 
     items = calloc(itemsCount, sizeof(char*));
@@ -111,13 +113,18 @@ struct StringArray explode(char* string, long len, char delimer) {
         indexStart = indexGlob;
         while(indexGlob < len && string[indexGlob] != delimer) indexGlob++;
 
+        if(indexGlob == indexStart){
+            itemsCount--;
+            i--;
+            continue;
+        }
         items[i] = calloc(indexGlob - indexStart + 1, sizeof(char));
         itemsLen[i] = indexGlob - indexStart;
         memcpy(items[i], string + indexStart, (indexGlob - indexStart) * sizeof(char));
         //move after space
         indexGlob++;
     }
-    
+
     itemsArray.size = itemsCount;
     itemsArray.data = items;
     itemsArray.dataItemLen = itemsLen;
@@ -147,13 +154,13 @@ void cleanDestcriptors(int** pipeDestriptor, unsigned int commandCount) {
 }
 
 void cleanAll(
-                struct StringArray items, 
-                struct CommandArgs* commands, 
-                unsigned int commandCount, 
-                char* commandsFileContent, 
-                pid_t* process,
-                int** pipeDescriptor
-            ) {
+        struct StringArray items,
+        struct CommandArgs* commands,
+        unsigned int commandCount,
+        char* commandsFileContent,
+        pid_t* process,
+        int** pipeDescriptor
+) {
     cleanStringArray(items);
     cleanCommands(commands, commandCount);
     cleanDestcriptors(pipeDescriptor, commandCount);
@@ -213,7 +220,11 @@ void executeLine(char* line, int len) {
     int** pipeDescriptor = calloc(commandCount - 1, sizeof(int*));
     for(int i = 0; i < commandCount - 1; i++) {
         pipeDescriptor[i] = calloc(2, sizeof(int));
-        pipe(pipeDescriptor[i]);
+        if(pipe(pipeDescriptor[i]) == -1){
+            fprintf(stderr, "Unable to start new pipe\n");
+            exit(107);
+        }
+
     }
 
     pid_t* process = calloc((size_t)commandCount, sizeof(pid_t));
