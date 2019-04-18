@@ -10,10 +10,11 @@
 #include <libgen.h>
 #include <sys/msg.h> 
 #include <sys/ipc.h>
-
 #include <errno.h>
 
 #include "server_const.h"
+
+//usuwanie robię tak że wywalam id klienta z ttablicy koklejek, wstawiam tam -1, i wywalam wgl jego id z wszystkich gróp, potem w inicie jak dodaje usera to patrze czy gdześ w tablicy nie ma -1 i jak jest to wsadzam tam jego id, ale muszę jeszcze zmodyfikowć userExist,  ooooo muszę wypełnić na początku całą tablicę -1 żebym się potem nie musiał przejmować że jakieś śmiećki będę mieć, i przerobić te tablice dynamiczne na statyczne, i zrobić czyszczenie po explode
 
 struct StringArray{
     unsigned int size;
@@ -21,38 +22,37 @@ struct StringArray{
 };
 
 int nextClientID = 0;
-int* clientsQueueId;
+int clientsQueueId[MAX_CLIENTS_COUNT];
 
-int* groupsSize;
-int** friendsGroups;
+int groupsSize[MAX_CLIENTS_COUNT];
+int friendsGroups[MAX_CLIENTS_COUNT][MAX_GROUP_SIZE];
 
 int actualUserId = 0;
 
 void executeCommand(struct message* input, struct message* output);
+int userIsExist(int userId);
 
 void stopCMD(struct message* input, struct message* output);
 void listCMD(struct message* input, struct message* output);
 void friendsCMD(struct message* input, struct message* output);
+void addCMD(struct message* input, struct message* output);
+void dellCMD(struct message* input, struct message* output);
 void initCMD(struct message* input, struct message* output);
 void echoCMD(struct message* input, struct message* output);
 void _2allCMD(struct message* input, struct message* output);
 void _2friendsCMD(struct message* input, struct message* output);
 void _2oneCMD(struct message* input, struct message* output);
 
-int userIsExist(int userId);
-
 int main(int argc, char *argv[], char *env[]) {
-
-
     // initialisation server
     char *homedir = getenv("HOME");
-    clientsQueueId = calloc(MAX_CLIENTS_COUNT, sizeof(int));
-
-    groupsSize = calloc(MAX_CLIENTS_COUNT, sizeof(int));
-    friendsGroups = calloc(MAX_CLIENTS_COUNT, sizeof(int));
-    for(int i = 0; i < MAX_CLIENTS_COUNT; i++){
-        friendsGroups[i] = calloc(MAX_GROUP_SIZE, sizeof(int));
-    }
+    
+    //zrobić zerowanie tablic !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+    
+    // friendsGroups = calloc(MAX_CLIENTS_COUNT, sizeof(int));
+    // for(int i = 0; i < MAX_CLIENTS_COUNT; i++){
+    //     friendsGroups[i] = calloc(MAX_GROUP_SIZE, sizeof(int));
+    // }
 
     key_t msg_queue_key;
     int qid;
@@ -105,6 +105,13 @@ int main(int argc, char *argv[], char *env[]) {
 void executeCommand(struct message* input, struct message* output) {
 
     actualUserId = input->message_text.id - SHIFTID;
+
+    if(!userIsExist(actualUserId) && input->message_type != INIT){
+        sprintf(output->message_text.buf, "User not exist.");
+        output->message_text.id = 0;
+        output->message_type = 500;
+        return;
+    }
 
     switch (input->message_type) {
         case STOP: {
@@ -186,10 +193,53 @@ struct StringArray explode(char* string, long len, char delimer) {
     return itemsArray;
 }
 
+void prepareMessage(struct message* input, struct message* output) {
+    __time_t now;
+    time(&now);
+    char date[21];
+    strftime(date, 21, "%d-%m-%Y_%H:%M:%S", localtime(&now));
+    sprintf(output->message_text.buf, "from %d, %s - %s", actualUserId, input->message_text.buf, date);
+}
+
+int sendMessage(int id, struct message* output) {
+    if (userIsExist(id) && msgsnd(clientsQueueId[id], &output, sizeof(struct message_text), 0) == -1) {
+        fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, errno = %d\n", errno);
+        return -1;
+    }
+    else {
+        printf("\033[1;32mServer:\033[0m send response to client %d from %d.\n", id, actualUserId);
+        return 1;
+    }
+}
+
 //------------------------------------------------------------------------------------------
 
 void stopCMD(struct message* input, struct message* output) {
+    // actualUserId;
+    
+    // //remove grom group
+    // int userGroupId = 0;
+    // int groupIndex = groupsSize[userId];
+    // for(int i = 0; i < idList.size; i++) {
+    //     userGroupId = strtol(idList.data[i], NULL, 0);
+    //     for(int j = 0; j < groupIndex; j++) {
+    //         if(friendsGroups[userId][j] == userGroupId){
+    //             for(int k = j; k < groupIndex - 1; k++) {
+    //                 friendsGroups[userId][k] = friendsGroups[userId][k + 1];
+    //             }
+    //             groupIndex--;
+    //             break;
+    //         }
+    //     }
+    // }
+    // groupsSize[userId] = groupIndex;
 
+    // if(groupIndex == 0) {
+    //     sprintf(output->message_text.buf, "Empty group.");
+    // }
+    // else {
+    //     sprintf(output->message_text.buf, "New group size is %d.", groupsSize[userId]);
+    // }
 }
 
 void listCMD(struct message* input, struct message* output) {
@@ -206,28 +256,83 @@ void listCMD(struct message* input, struct message* output) {
 
 void friendsCMD(struct message* input, struct message* output) {
     int userId = actualUserId;
-    if(!userIsExist(actualUserId)){
-        sprintf(output->message_text.buf, "User not exist.");
+    //explode ids list
+    struct StringArray idList = explode(input->message_text.buf, strlen(input->message_text.buf), ',');
+    
+    if(idList.size > MAX_GROUP_SIZE){
+        sprintf(output->message_text.buf, "To many users.");
         return;
     }
 
-    //explode ids list
-    struct StringArray idList = explode(input->message_text.buf, 
-                                        strlen(input->message_text.buf),
-                                        ','
-                                    );
-    
     int groupSize = 0;
-    for(int i = 0; i < idList.size && groupSize < 20; i++) {
+    for(int i = 0; i < idList.size; i++) {
         friendsGroups[userId][groupSize] = strtol(idList.data[i], NULL, 0);
         if(friendsGroups[userId][groupSize] >= 0 && userIsExist(friendsGroups[userId][groupSize])) groupSize++;
     }
     groupsSize[userId] = groupSize;
 
-    sprintf(output->message_text.buf, "Create group with size %d.", groupSize);
+    if(groupSize == 0) {
+        sprintf(output->message_text.buf, "Empty group.");
+    }
+    else {
+        sprintf(output->message_text.buf, "Create group with size %d.", groupsSize[userId]);
+    }
 }
 
-//TODO: trzeba dorobić pozostałe akcje do friendsóœ
+void addCMD(struct message* input, struct message* output) {
+    int userId = actualUserId;
+    //explode ids list
+    struct StringArray idList = explode(input->message_text.buf, strlen(input->message_text.buf), ',');
+    
+    int groupIndex = groupsSize[userId];
+    if(idList.size + groupIndex > MAX_GROUP_SIZE){
+        sprintf(output->message_text.buf, "To many users.");
+        return;
+    }
+
+    for(int i = 0; i < idList.size; i++) {
+        friendsGroups[userId][groupIndex] = strtol(idList.data[i], NULL, 0);
+        if(friendsGroups[userId][groupIndex] >= 0 && userIsExist(friendsGroups[userId][groupIndex])) groupIndex++;
+    }
+    groupsSize[userId] = groupIndex;
+
+    if(groupIndex == 0) {
+        sprintf(output->message_text.buf, "Empty group.");
+    }
+    else {
+        sprintf(output->message_text.buf, "Create group with size %d.", groupsSize[userId]);
+    }
+}
+
+void dellCMD(struct message* input, struct message* output) {
+    int userId = actualUserId;
+    //explode ids list
+    struct StringArray idList = explode(input->message_text.buf, strlen(input->message_text.buf), ',');
+
+    //remove grom group
+    int userGroupId = 0;
+    int groupIndex = groupsSize[userId];
+    for(int i = 0; i < idList.size; i++) {
+        userGroupId = strtol(idList.data[i], NULL, 0);
+        for(int j = 0; j < groupIndex; j++) {
+            if(friendsGroups[userId][j] == userGroupId){
+                for(int k = j; k < groupIndex - 1; k++) {
+                    friendsGroups[userId][k] = friendsGroups[userId][k + 1];
+                }
+                groupIndex--;
+                break;
+            }
+        }
+    }
+    groupsSize[userId] = groupIndex;
+
+    if(groupIndex == 0) {
+        sprintf(output->message_text.buf, "Empty group.");
+    }
+    else {
+        sprintf(output->message_text.buf, "New group size is %d.", groupsSize[userId]);
+    }
+}
 
 void initCMD(struct message* input, struct message* output) {
     int userId = strtol(input->message_text.buf, NULL, 0);
@@ -259,13 +364,38 @@ void echoCMD(struct message* input, struct message* output) {
 }
 
 void _2allCMD(struct message* input, struct message* output) {
+    prepareMessage(input, output);
 
+    int sendCounter = 0;
+    for(int i = 0; i < nextClientID; i++) {
+        if(i != actualUserId && sendMessage(i, output)) sendCounter++;
+    }
+
+    sprintf(output->message_text.buf, "Send %d/%d message", sendCounter, nextClientID-1);
+    sendMessage(actualUserId, output);
 }
 
 void _2friendsCMD(struct message* input, struct message* output) {
+    prepareMessage(input, output);
 
+    int sendCounter = 0;
+    for(int i = 0; i < groupsSize[actualUserId]; i++) {
+        if(friendsGroups[actualUserId][i] != actualUserId && sendMessage(i, output)) sendCounter++;
+    }
+
+    sprintf(output->message_text.buf, "Send %d/%d message", sendCounter, groupsSize[actualUserId]-1);
+    sendMessage(actualUserId, output);
 }
 
 void _2oneCMD(struct message* input, struct message* output) {
+    prepareMessage(input, output);
 
+    if(!userIsExist(input->message_text.additionalArg)){
+        sprintf(output->message_text.buf, "Destination user (%d) not exist", input->message_text.additionalArg);
+    }
+
+    sendMessage(input->message_text.additionalArg, output);
+
+    sprintf(output->message_text.buf, "OK, send message");
+    sendMessage(actualUserId, output);
 }

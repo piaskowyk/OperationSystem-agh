@@ -2,13 +2,14 @@
 #define QUEUE_PERMISSIONS 0660
 
 #define MAX_CLIENTS_COUNT 20
-#define MAX_GROUP_SIZE 5
+#define MAX_GROUP_SIZE 10
 
 #define SHIFTID 100
 
 struct message_text {
     int id;
-    char buf[200];
+    int additionalArg;
+    char buf[256];
 };
 
 struct message {
@@ -19,11 +20,13 @@ struct message {
 #define STOP 10
 #define LIST 11
 #define FRIENDS 12
-#define INIT 13
-#define ECHO 14
-#define _2ALL 15
-#define _2FRIENDS 16
-#define _2ONE 17
+#define ADD 13
+#define DEL 14
+#define INIT 15
+#define ECHO 16
+#define _2ALL 17
+#define _2FRIENDS 18
+#define _2ONE 19
 
 #define SERVER_RESPONSE 100
 
