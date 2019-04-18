@@ -227,6 +227,8 @@ void friendsCMD(struct message* input, struct message* output) {
     sprintf(output->message_text.buf, "Create group with size %d.", groupSize);
 }
 
+//TODO: trzeba dorobić pozostałe akcje do friendsóœ
+
 void initCMD(struct message* input, struct message* output) {
     int userId = strtol(input->message_text.buf, NULL, 0);
     
