@@ -91,29 +91,33 @@ int main(int argc, char *argv[], char *env[]) {
         userID = serverResponse.message_type;
     }
 
-    struct sigaction actionStruct;
-    actionStruct.sa_handler = handleSIGINT;
-    sigemptyset(&actionStruct.sa_mask); 
-    sigaddset(&actionStruct.sa_mask, SIGINT); 
-    actionStruct.sa_flags = 0;
-    sigaction(SIGINT, &actionStruct, NULL);
 
     pid = fork();
     if(pid == 0){
+        struct sigaction actionStruct;
+        actionStruct.sa_handler = NULL; 
+        actionStruct.sa_flags = 0;
+        sigaction(SIGINT, &actionStruct, NULL);
+
         mode = 1;
-        catcher();
+        sender();
     }
     else if(pid > 0) {
+        struct sigaction actionStruct;
+        actionStruct.sa_handler = handleSIGINT;
+        sigemptyset(&actionStruct.sa_mask); 
+        sigaddset(&actionStruct.sa_mask, SIGINT); 
+        actionStruct.sa_flags = 0;
+        sigaction(SIGINT, &actionStruct, NULL);
+
         mode = 2;
-        sender();
+        catcher();
     }
     else {
         fprintf(stderr, "\033[1;33mClient:\033[0m Error while creating fork.\n");
     }
     
     endClient();
-
-    printf("\033[1;33mClient:\033[0m Close.\n");
 
     return 0;
 }
@@ -251,7 +255,7 @@ void sender() {
         }
 
         if(strcmp(commandArgs.data[0], "READ") == 0) {
-            
+            executeFile(&commandArgs);
         } 
         else {
             if(!executeCommand(&commandArgs)){
@@ -268,7 +272,7 @@ void sender() {
 void catcher() {
     while (1) {
         // read an incoming message, with priority order
-        if (msgrcv(clientQueue, &serverResponse, sizeof(struct message_text), -1000, 0) == -1) {
+        if (msgrcv(clientQueue, &serverResponse, sizeof(struct message_text), -100, 0) == -1) {
             fprintf(stderr, "\033[1;33mClient:\033[0m Error while reading input data.\n");
         } else {
             printf("\033[1;33mClient:\033[0m message received:\n\ttype: %ld, id: %d, message: %s \n", 
@@ -317,11 +321,26 @@ void executeFile(struct StringArray* commandArgs) {
 //--------------------------------------------------------------------------------------------
 
 void endClient() {
+
+    clientRequest.message_text.id = userID;
+    clientRequest.message_type = STOP;
+    sprintf(clientRequest.message_text.buf, "STOP from client %d", userID);
+
+    if (msgsnd(serverQueue, &clientRequest, sizeof(struct message_text), 0) == -1) {
+        fprintf(stderr, "\033[1;33mClient:\033[0m Error while sending data about STOP.\n");
+    }
+    else {
+        printf("\033[1;33mClient:\033[0m Send information about STOP.\n");
+    }
+    
     if (msgctl(clientQueue, IPC_RMID, NULL) == -1) {
         printf("\033[1;33mClient:\033[0m Error while closing client queue.\n");
         exit(1);
     }
-    kill(SIGINT, pid);
+    
+    kill(pid, 9);
+    printf("\033[1;33mClient:\033[0m Close.\n");
+    exit(0);
 }
 
 void handleSIGINT(int signalNumber) {

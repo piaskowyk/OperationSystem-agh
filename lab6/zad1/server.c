@@ -78,16 +78,21 @@ int main(int argc, char *argv[], char *env[]) {
     while (runServer) {
         // read an incoming message, with priority order
         if (msgrcv(qid, &message, sizeof(struct message_text), -100, 0) == -1) {
-            fprintf(stderr, "\033[1;32mServer:\033[0m Error while reading input data.\n");
+            if(EINTR != errno) { //ignore interapt by SIGINT
+                fprintf(stderr, "\033[1;32mServer:\033[0m Error while reading input data. errno = %d\n", errno);
+            }
+            continue;
         } else {
             printf("\033[1;32mServer:\033[0m message received:\n\ttype: %s, id: %d, message: %s \n", 
                 typeToStr(message.message_type), 
                 message.message_text.id,
                 message.message_text.buf
             );
+
+            executeCommand(&message, &response);
         }
 
-        executeCommand(&message, &response);
+        if(message.message_type == STOP) continue;
 
         // send reply message to client
         if (
@@ -106,7 +111,7 @@ int main(int argc, char *argv[], char *env[]) {
 
     //end working of server
 
-    printf("\033[1;32mServer:\033[0m Server is closed.\n");
+    printf("\033[1;32mServer:\033[0m Server close.\n");
 
     return 0;
 }
@@ -222,13 +227,24 @@ void sendShutdownToAllClients() {
     msg.message_type = SHUTDOWN;
     sprintf(msg.message_text.buf, "STOP");
     for(int i = 0; i < nextClientID; i++){
-        sendMessage(1, &msg);
+        if (!userExist(i) || msgsnd(clientsQueueId[i], &msg, sizeof(struct message_text), 0) == -1) {
+            fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, errno = %d\n", errno);
+        }
+        else {
+            printf("\033[1;32mServer:\033[0m Send SHUTDOWN signal.\n");
+        }
     }
 }
 
 void handleSIGINT(int signalNumber) {
     printf("\033[1;32mServer:\033[0m Receive signal SIGINT.\n");
-    sendShutdownToAllClients();
+    if(activeUserCount > 0){
+        sendShutdownToAllClients();
+    }
+    else {
+        printf("\033[1;32mServer:\033[0m Server close.\n");
+        exit(0);
+    }
 }
 
 //------------------------------------------------------------------------------------------
