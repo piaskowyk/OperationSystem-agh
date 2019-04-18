@@ -7,10 +7,12 @@ echo "-----------------------------------------------------------"
 echo ""
 ./server &
 ./client &
+# ./client &
 
 sleep 2
-kill $(pidof server)
-kill $(pidof client)
+# kill $(pidof server)
+# kill $(pidof client)
 
-# killall -9 server
-# killall -9 client
+echo ""
+killall -9 server
+killall -9 client
