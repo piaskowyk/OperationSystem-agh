@@ -13,15 +13,32 @@
 
 #include "server_const.h"
 
+//obsłuch sygnałów to to to nie działa chyba
+
 int mode = 0;
+int runClient = 1;
 int serverQueue, clientQueue;
 int commandLen = 256;
 struct message clientRequest, serverResponse;
 int userID = -1;
+pid_t pid;
 
 void sender();
 void catcher();
 
+void stopCMD(struct StringArray* commandArgs);
+void listCMD(struct StringArray* commandArgs);
+void friendsCMD(struct StringArray* commandArgs);
+void addCMD(struct StringArray* commandArgs);
+void dellCMD(struct StringArray* commandArgs);
+void echoCMD(struct StringArray* commandArgs);
+void _2allCMD(struct StringArray* commandArgs);
+void _2friendsCMD(struct StringArray* commandArgs);
+void _2oneCMD(struct StringArray* commandArgs);
+
+void executeFile(struct StringArray* commandArgs);
+
+void endClient();
 void handleSIGINT(int signalNumber);
 
 int main(int argc, char *argv[], char *env[]) {
@@ -81,7 +98,7 @@ int main(int argc, char *argv[], char *env[]) {
     actionStruct.sa_flags = 0;
     sigaction(SIGINT, &actionStruct, NULL);
 
-    pid_t pid = fork();
+    pid = fork();
     if(pid == 0){
         mode = 1;
         catcher();
@@ -94,8 +111,7 @@ int main(int argc, char *argv[], char *env[]) {
         fprintf(stderr, "\033[1;33mClient:\033[0m Error while creating fork.\n");
     }
     
-    //send STOP signal
-    kill(SIGINT, pid);
+    endClient();
 
     printf("\033[1;33mClient:\033[0m Close.\n");
 
@@ -104,56 +120,117 @@ int main(int argc, char *argv[], char *env[]) {
 
 //--------------------------------------------------------------------------------------------
 
-void executeCommand(struct message* input, struct message* output) {
-
-    actualUserId = input->message_text.id - SHIFTID;
-
-    if(!userExist(actualUserId) && input->message_type != INIT){
-        sprintf(output->message_text.buf, "User not exist.");
-        output->message_text.id = SERVER_ID;
-        output->message_type = 500;
-        return;
+void sendMessage() {
+    if (msgsnd(serverQueue, &clientRequest, sizeof(struct message_text), 0) == -1) {
+        printf("\033[1;33mClient:\033[0m Error while sending request to server.\n");
     }
-
-    switch (input->message_type) {
-        case STOP: {
-            stopCMD(input, output);
-        } break;
-        case LIST: {
-            listCMD(input, output);
-        } break;
-        case FRIENDS: {
-            friendsCMD(input, output);
-        } break;
-        case INIT: {
-            initCMD(input, output);
-        } break;
-        case ECHO: {
-            echoCMD(input, output);
-        } break;
-        case _2ALL: {
-            _2allCMD(input, output);
-        } break;
-        case _2FRIENDS: {
-            _2friendsCMD(input, output);
-        } break;
-        case _2ONE: {
-            _2oneCMD(input, output);
-        } break;
-
-        default:
-            break;
+    else {
+        printf("\033[1;33mClient:\033[0m Send message to server.\n");
     }
+}
 
-    output->message_text.id = SERVER_ID;
-    output->message_type = actualUserId + SHIFTID;
+int executeCommand(struct StringArray* commandArgs) {
+
+    clientRequest.message_text.id = userID;
     
+    if(strcmp(commandArgs->data[0], "STOP") == 0) {
+        clientRequest.message_type = STOP;
+        stopCMD(commandArgs);
+    }
+    else if(strcmp(commandArgs->data[0], "LIST") == 0) {
+        if(commandArgs->size != 1) return 0;
+        clientRequest.message_type = LIST;
+        listCMD(commandArgs);
+    }
+    else if(strcmp(commandArgs->data[0], "FRIENDS") == 0) {
+        if(commandArgs->size != 2) return 0;
+        clientRequest.message_type = FRIENDS;
+        friendsCMD(commandArgs);
+    }
+    else if(strcmp(commandArgs->data[0], "ADD") == 0) {
+        if(commandArgs->size != 2) return 0;
+        clientRequest.message_type = ADD;
+        addCMD(commandArgs);
+    }
+    else if(strcmp(commandArgs->data[0], "DEL") == 0) {
+        if(commandArgs->size != 2) return 0;
+        clientRequest.message_type = DEL;
+        dellCMD(commandArgs);
+    }
+    else if(strcmp(commandArgs->data[0], "ECHO") == 0) {
+        if(commandArgs->size != 2) return 0;
+        clientRequest.message_type = ECHO;
+        echoCMD(commandArgs);
+    }
+    else if(strcmp(commandArgs->data[0], "2ALL") == 0) {
+        if(commandArgs->size != 2) return 0;
+        clientRequest.message_type = _2ALL;
+        _2allCMD(commandArgs);
+    }
+    else if(strcmp(commandArgs->data[0], "2FRIENDS") == 0) {
+        if(commandArgs->size != 2) return 0;
+        clientRequest.message_type = _2FRIENDS;
+        _2friendsCMD(commandArgs);
+    }
+    else if(strcmp(commandArgs->data[0], "2ONE") == 0) {
+        if(commandArgs->size != 3) return 0;
+        clientRequest.message_type = _2ONE;
+        _2oneCMD(commandArgs);
+    }
+    else {
+        return 0;
+    }
+
+    sendMessage();
+
+    return 1;
+}
+
+//--------------------------------------------------------------------------------------------
+
+void stopCMD(struct StringArray* commandArgs) {
+    runClient = 0;
+    sprintf(clientRequest.message_text.buf, "STOP from client %d", userID);
+}
+
+void listCMD(struct StringArray* commandArgs) {
+    sprintf(clientRequest.message_text.buf, "LIST");
+}
+
+void friendsCMD(struct StringArray* commandArgs) {
+    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+}
+
+void addCMD(struct StringArray* commandArgs) {
+    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+}
+
+void dellCMD(struct StringArray* commandArgs) {
+    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+}
+
+void echoCMD(struct StringArray* commandArgs) {
+    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+}
+
+void _2allCMD(struct StringArray* commandArgs) {
+    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+}
+
+void _2friendsCMD(struct StringArray* commandArgs) {
+    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+}
+
+void _2oneCMD(struct StringArray* commandArgs) {
+    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+    clientRequest.message_text.additionalArg = strtol(commandArgs->data[2], NULL, 0);
 }
 
 //--------------------------------------------------------------------------------------------
 
 void sender() {
-    while(1){
+    //receive data from stdin
+    while(runClient){
         char* command = calloc(commandLen, sizeof(char));  
         printf(">> ");
         int oneChar = 0; 
@@ -166,7 +243,6 @@ void sender() {
                 command[commandLen-1] = '\0';
             }
         }
-        printf("inser: %s\n",command);
 
         struct StringArray commandArgs = explode(command, strlen(command), ' ');
 
@@ -174,47 +250,81 @@ void sender() {
             printf("\033[1;33mClient:\033[0m Command not recognized.\n");
         }
 
-
+        if(strcmp(commandArgs.data[0], "READ") == 0) {
+            
+        } 
+        else {
+            if(!executeCommand(&commandArgs)){
+                printf("\033[1;33mClient:\033[0m Command not recognized.\n");
+            }
+        }
 
         free(commandArgs.data);
-        free(command); 
+        free(command);
+        sleep(1);
     }
-
-
-    clientRequest.message_type = FRIENDS;
-    clientRequest.message_text.id = userID;
-    sprintf(clientRequest.message_text.buf, "0,123,456,7890");
-
-    // send message to server
-    if (msgsnd(serverQueue, &clientRequest, sizeof(struct message_text), 0) == -1) {
-        printf("\033[1;33mClient:\033[0m Error while send init response to server.\n");
-        exit (1);
-    }
-    else {
-        fprintf(stderr, "\033[1;33mClient:\033[0m Send data to server.\n");
-    }
-
-    // read response from server
-    if (msgrcv(clientQueue, &serverResponse, sizeof(struct message_text), 0, 0) == -1) {
-        printf("\033[1;33mClient:\033[0m Error while read init response from server.\n");
-        exit (1);
-    }
-    else {
-        printf("\033[1;33mClient:\033[0m message received:\n\ttype: %ld, message: %s \n", 
-                serverResponse.message_type,
-                serverResponse.message_text.buf
-            );
-    } 
 }
 
 void catcher() {
-    //odbieraj sygnały z kolejki servera
+    while (1) {
+        // read an incoming message, with priority order
+        if (msgrcv(clientQueue, &serverResponse, sizeof(struct message_text), -1000, 0) == -1) {
+            fprintf(stderr, "\033[1;33mClient:\033[0m Error while reading input data.\n");
+        } else {
+            printf("\033[1;33mClient:\033[0m message received:\n\ttype: %ld, id: %d, message: %s \n", 
+                serverResponse.message_type, 
+                serverResponse.message_text.id,
+                serverResponse.message_text.buf
+            );
+        }
+
+        if(serverResponse.message_type == SHUTDOWN){
+            break;
+        }
+    }
 }
 
-void handleSIGINT(int signalNumber) {
-    printf("\033[1;33mClient:\033[0m Receive signal SIGINT.\n");
+//--------------------------------------------------------------------------------------------
+
+void executeFile(struct StringArray* commandArgs) {
+    if(commandArgs->size != 2) {
+        printf("\033[1;33mClient:\033[0m Invalid arguments.\n");
+    }
+
+    FILE* file = fopen(commandArgs->data[1], "r");
+    if(file == NULL) {
+        printf("\033[1;33mClient:\033[0m Error while opening file %s.\n", commandArgs->data[1]);
+    }
+
+    long fileSize = 0;
+    fseek(file, 0, SEEK_END);
+    fileSize = ftell(file);
+    rewind(file);
+
+    char* fileContent = calloc(fileSize, sizeof(char));
+    struct StringArray command = explode(fileContent, fileSize, '\n');
+
+    for(int i = 0; i < command.size; i++) {
+        struct StringArray commandArgs = explode(command.data[i], strlen(command.data[i]), ' ');
+        executeCommand(&commandArgs);
+        free(commandArgs.data);
+    }
+
+    free(fileContent);
+    free(command.data);
+}
+
+//--------------------------------------------------------------------------------------------
+
+void endClient() {
     if (msgctl(clientQueue, IPC_RMID, NULL) == -1) {
         printf("\033[1;33mClient:\033[0m Error while closing client queue.\n");
         exit(1);
     }
+    kill(SIGINT, pid);
+}
+
+void handleSIGINT(int signalNumber) {
+    printf("\033[1;33mClient:\033[0m Receive signal SIGINT.\n");
+    endClient();
 }

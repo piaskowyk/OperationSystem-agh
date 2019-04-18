@@ -14,6 +14,8 @@
 
 #include "server_const.h"
 
+//obsłuch sygnałów to to to nie działa chyba
+
 int nextClientID = 0;
 int clientsQueueId[MAX_CLIENTS_COUNT];
 
@@ -129,6 +131,12 @@ void executeCommand(struct message* input, struct message* output) {
         } break;
         case FRIENDS: {
             friendsCMD(input, output);
+        } break;
+        case ADD: {
+            addCMD(input, output);
+        } break;
+        case DEL: {
+            dellCMD(input, output);
         } break;
         case INIT: {
             initCMD(input, output);
