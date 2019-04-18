@@ -14,11 +14,6 @@
 
 #include "server_const.h"
 
-struct StringArray{
-    unsigned int size;
-    char** data;
-};
-
 int nextClientID = 0;
 int clientsQueueId[MAX_CLIENTS_COUNT];
 
@@ -26,9 +21,12 @@ int groupsSize[MAX_CLIENTS_COUNT];
 int friendsGroups[MAX_CLIENTS_COUNT][MAX_GROUP_SIZE];
 
 int actualUserId = 0;
+int activeUserCount = 0;
+int runServer = 1;
 
 void executeCommand(struct message* input, struct message* output);
 int userExist(int userId);
+void sendShutdownToAllClients();
 
 void stopCMD(struct message* input, struct message* output);
 void listCMD(struct message* input, struct message* output);
@@ -40,6 +38,8 @@ void echoCMD(struct message* input, struct message* output);
 void _2allCMD(struct message* input, struct message* output);
 void _2friendsCMD(struct message* input, struct message* output);
 void _2oneCMD(struct message* input, struct message* output);
+
+void handleSIGINT(int signalNumber);
 
 int main(int argc, char *argv[], char *env[]) {
     // initialisation server
@@ -63,10 +63,17 @@ int main(int argc, char *argv[], char *env[]) {
         exit(101);
     }
 
+    struct sigaction actionStruct;
+    actionStruct.sa_handler = handleSIGINT;
+    sigemptyset(&actionStruct.sa_mask); 
+    sigaddset(&actionStruct.sa_mask, SIGINT); 
+    actionStruct.sa_flags = 0;
+    sigaction(SIGINT, &actionStruct, NULL); 
+
     // start listening on user requests
     printf("\033[1;32mServer:\033[0m Server is running\n");
 
-    while (1) {
+    while (runServer) {
         // read an incoming message, with priority order
         if (msgrcv(qid, &message, sizeof(struct message_text), -100, 0) == -1) {
             fprintf(stderr, "\033[1;32mServer:\033[0m Error while reading input data.\n");
@@ -95,6 +102,10 @@ int main(int argc, char *argv[], char *env[]) {
         
     }
 
+    //end working of server
+
+    printf("\033[1;32mServer:\033[0m Server is closed.\n");
+
     return 0;
 }
 
@@ -104,7 +115,7 @@ void executeCommand(struct message* input, struct message* output) {
 
     if(!userExist(actualUserId) && input->message_type != INIT){
         sprintf(output->message_text.buf, "User not exist.");
-        output->message_text.id = 0;
+        output->message_text.id = SERVER_ID;
         output->message_type = 500;
         return;
     }
@@ -139,7 +150,7 @@ void executeCommand(struct message* input, struct message* output) {
             break;
     }
 
-    output->message_text.id = actualUserId + SHIFTID;
+    output->message_text.id = SERVER_ID;
     output->message_type = actualUserId + SHIFTID;
     
 }
@@ -154,47 +165,6 @@ int userQueueExist(int userQueueId) {
         if(clientsQueueId[i] == userQueueId) return 1;
     }
     return 0;
-}
-
-struct StringArray explode(char* string, long len, char delimer) {
-    struct StringArray itemsArray;
-    char** items = NULL;
-    int itemsCount = 0;
-
-    itemsArray.size = 0;
-    itemsArray.data = NULL;
-
-    if(len == 0 || string == NULL) return itemsArray;
-
-    itemsCount++;
-    for(long i = 0; i < len; i++){
-        if(string[i] == delimer) {
-            itemsCount++;
-        }
-    }
-
-    items = calloc(itemsCount, sizeof(char*));
-
-    int indexGlob, indexStart;
-    indexGlob = indexStart = 0;
-    for(int i = 0; i < itemsCount; i++) {
-        indexStart = indexGlob;
-        while(indexGlob < len && string[indexGlob] != delimer) indexGlob++;
-
-        if(indexGlob == indexStart){
-            itemsCount--;
-            i--;
-            continue;
-        }
-        items[i] = calloc(indexGlob - indexStart + 1, sizeof(char));
-        memcpy(items[i], string + indexStart, (indexGlob - indexStart) * sizeof(char));
-        indexGlob++;
-    }
-    
-    itemsArray.size = itemsCount;
-    itemsArray.data = items;
-
-    return itemsArray;
 }
 
 void prepareMessage(struct message* input, struct message* output) {
@@ -226,6 +196,7 @@ int getFreeIndex() {
             if(clientsQueueId[i] == -1) return i;
         }
     }
+    return -1;
 }
 
 int existInGroup(int actualUserId, int friendsId) {
@@ -233,6 +204,23 @@ int existInGroup(int actualUserId, int friendsId) {
         if(friendsGroups[actualUserId][i] == friendsId) return 1;
     }
     return 0;
+}
+
+//------------------------------------------------------------------------------------------
+
+void sendShutdownToAllClients() {
+    struct message msg;
+    msg.message_text.id = SERVER_ID;
+    msg.message_type = SHUTDOWN;
+    sprintf(msg.message_text.buf, "STOP");
+    for(int i = 0; i < nextClientID; i++){
+        sendMessage(1, &msg);
+    }
+}
+
+void handleSIGINT(int signalNumber) {
+    printf("\033[1;32mServer:\033[0m Receive signal SIGINT.\n");
+    sendShutdownToAllClients();
 }
 
 //------------------------------------------------------------------------------------------
@@ -245,7 +233,7 @@ void stopCMD(struct message* input, struct message* output) {
     for(int i = 0; i < nextClientID; i++) {
         for(int j = 0; j < groupsSize[i]; j++) {
             if(friendsGroups[i][j] == actualUserId) {
-                for(int k = j; k < groupIndex - 1; k++) {
+                for(int k = j; k < groupsSize[i] - 1; k++) {
                     friendsGroups[i][k] = friendsGroups[i][k + 1];
                 }
                 groupsSize[i]--;
@@ -255,6 +243,11 @@ void stopCMD(struct message* input, struct message* output) {
     }
 
     sprintf(output->message_text.buf, "User is removed.");
+    activeUserCount--;
+    
+    if(activeUserCount == 0) {
+        runServer = 0;
+    }
 }
 
 void listCMD(struct message* input, struct message* output) {
@@ -297,36 +290,38 @@ void friendsCMD(struct message* input, struct message* output) {
     else {
         sprintf(output->message_text.buf, "Create group with size %d.", groupsSize[actualUserId]);
     }
+    free(idList.data);
 }
 
 void addCMD(struct message* input, struct message* output) {
     //explode ids list
     struct StringArray idList = explode(input->message_text.buf, strlen(input->message_text.buf), ',');
     
-    int groupIndex = groupsSize[actualUserId];
-    if(idList.size + groupIndex > MAX_GROUP_SIZE){
+    int groupSize = groupsSize[actualUserId];
+    if(idList.size + groupSize > MAX_GROUP_SIZE){
         sprintf(output->message_text.buf, "To many users.");
         return;
     }
 
     for(int i = 0; i < idList.size; i++) {
-        friendsGroups[actualUserId][groupIndex] = strtol(idList.data[i], NULL, 0);
+        friendsGroups[actualUserId][groupSize] = strtol(idList.data[i], NULL, 0);
         if(
-            friendsGroups[actualUserId][groupIndex] >= 0 && 
-            userExist(friendsGroups[actualUserId][groupIndex]) &&
+            friendsGroups[actualUserId][groupSize] >= 0 && 
+            userExist(friendsGroups[actualUserId][groupSize]) &&
             !existInGroup(actualUserId, friendsGroups[actualUserId][groupSize])
         ) {
-            groupIndex++;
+            groupSize++;
         }
     }
-    groupsSize[actualUserId] = groupIndex;
+    groupsSize[actualUserId] = groupSize;
 
-    if(groupIndex == 0) {
+    if(groupSize == 0) {
         sprintf(output->message_text.buf, "Empty group.");
     }
     else {
         sprintf(output->message_text.buf, "Create group with size %d.", groupsSize[actualUserId]);
     }
+    free(idList.data);
 }
 
 void dellCMD(struct message* input, struct message* output) {
@@ -357,27 +352,31 @@ void dellCMD(struct message* input, struct message* output) {
     else {
         sprintf(output->message_text.buf, "New group size is %d.", groupsSize[userId]);
     }
+    free(idList.data);
 }
 
 void initCMD(struct message* input, struct message* output) {
-    int userId = strtol(input->message_text.buf, NULL, 0);
+    int userQueueId = strtol(input->message_text.buf, NULL, 0);
     
     if(userQueueExist(userQueueId)){
         sprintf(output->message_text.buf, "User already exist.");
+        output->message_type = -1;
     }
     else {
         int index = getFreeIndex();
         if(index != -1){
             sprintf(output->message_text.buf, "%d", index);
-            clientsQueueId[index] = userId;   
+            clientsQueueId[index] = userQueueId;   
+            actualUserId = index;
+            output->message_type = index;
+            activeUserCount++;
         }
         else {
             sprintf(output->message_text.buf, "Too many clients.");
+            output->message_type = -1;
         }
     }
 
-    actualUserId = index;
-    output->message_type = index;
 }
 
 void echoCMD(struct message* input, struct message* output) {

@@ -6,7 +6,7 @@ echo ""
 echo "-----------------------------------------------------------"
 echo ""
 ./server &
-./client &
+./client
 # ./client &
 
 sleep 2

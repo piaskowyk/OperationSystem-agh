@@ -17,6 +17,11 @@ struct message {
     struct message_text message_text;
 };
 
+struct StringArray{
+    unsigned int size;
+    char** data;
+};
+
 #define STOP 10
 #define LIST 11
 #define FRIENDS 12
@@ -28,7 +33,10 @@ struct message {
 #define _2FRIENDS 18
 #define _2ONE 19
 
+#define SHUTDOWN 20
+
 #define SERVER_RESPONSE 100
+#define SERVER_ID -10
 
 char* typeToStr(int type){
     switch(type){
@@ -59,4 +67,45 @@ char* typeToStr(int type){
     }
 
     return "";
+}
+
+struct StringArray explode(char* string, long len, char delimer) {
+    struct StringArray itemsArray;
+    char** items = NULL;
+    int itemsCount = 0;
+
+    itemsArray.size = 0;
+    itemsArray.data = NULL;
+
+    if(len == 0 || string == NULL) return itemsArray;
+
+    itemsCount++;
+    for(long i = 0; i < len; i++){
+        if(string[i] == delimer) {
+            itemsCount++;
+        }
+    }
+
+    items = calloc(itemsCount, sizeof(char*));
+
+    int indexGlob, indexStart;
+    indexGlob = indexStart = 0;
+    for(int i = 0; i < itemsCount; i++) {
+        indexStart = indexGlob;
+        while(indexGlob < len && string[indexGlob] != delimer) indexGlob++;
+
+        if(indexGlob == indexStart){
+            itemsCount--;
+            i--;
+            continue;
+        }
+        items[i] = calloc(indexGlob - indexStart + 1, sizeof(char));
+        memcpy(items[i], string + indexStart, (indexGlob - indexStart) * sizeof(char));
+        indexGlob++;
+    }
+    
+    itemsArray.size = itemsCount;
+    itemsArray.data = items;
+
+    return itemsArray;
 }
