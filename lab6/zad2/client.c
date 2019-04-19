@@ -10,11 +10,10 @@
 #include <libgen.h>
 #include <sys/msg.h> 
 #include <sys/ipc.h>
+#include <errno.h>
 #include <mqueue.h>
 
 #include "server_const.h"
-
-//obsłuch sygnałów to to to nie działa chyba
 
 int mode = 0;
 int runClient = 1;
@@ -23,6 +22,12 @@ int commandLen = 256;
 struct message clientRequest, serverResponse;
 int userID = -1;
 pid_t pid;
+
+char clientQueueName[64];
+mqd_t serverQueue, clientQueue;
+
+char input[MAX_MESSAGE_SIZE];
+char output[MAX_MESSAGE_SIZE];
 
 void sender();
 void catcher();
@@ -42,47 +47,48 @@ void executeFile(struct StringArray* commandArgs);
 void endClient();
 void handleSIGINT(int signalNumber);
 
+void parseServerResponse();
+void parseClientRequest();
+
 int main(int argc, char *argv[], char *env[]) {
 
-    char *homedir = getenv("HOME");
+    sprintf(clientQueueName, "/client-%d", getpid());
 
-    key_t serverQueueKey;
+    struct mq_attr attr;
+    attr.mq_flags = 0;
+    attr.mq_maxmsg = MAX_MESSAGES;
+    attr.mq_msgsize = MAX_MESSAGE_SIZE;
+    attr.mq_curmsgs = 0;
 
-    // create client queue for receiving messages from server
-    if ((clientQueue = msgget(IPC_PRIVATE, 0660)) == -1) {
+    if ((clientQueue = mq_open(clientQueueName, O_RDONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) {
         printf("\033[1;33mClient:\033[0m Error while initialization client queue.\n");
         exit(1);
     }
 
-    if ((serverQueueKey = ftok(homedir, PROJECT_ID)) == -1) {
-        printf("\033[1;33mClient:\033[0m Error while get key from ftok().\n");
+    if ((serverQueue = mq_open(SERVER_QUEUE_NAME, O_WRONLY)) == -1) {
+        printf("\033[1;33mClient:\033[0m Error while getting access to server queue.\n");
         exit(1);
     }
 
-    if ((serverQueue = msgget(serverQueueKey, 0)) == -1) {
-        printf("\033[1;33mClient:\033[0m Error while initialization access to server queue.\n");
-        exit(1);
-    }
-    
     clientRequest.message_type = INIT;
     clientRequest.message_text.id = -1;
-    sprintf(clientRequest.message_text.buf, "%d", clientQueue);
+    sprintf(clientRequest.message_text.buf, "%s", clientQueueName);
+
+    parseClientRequest();
 
     // send message to server
-    if (msgsnd(serverQueue, &clientRequest, sizeof(struct message_text), 0) == -1) {
+    if (mq_send(serverQueue, output, strlen(output) + 1, INIT) == -1) {
         printf("\033[1;33mClient:\033[0m Error while sending INIT response to server.\n");
         exit(1);
     }
-    else {
-        printf("\033[1;33mClient:\033[0m Send INIT action to server.\n");
-    }
-
-    // read response from server
-    if (msgrcv(clientQueue, &serverResponse, sizeof(struct message_text), 0, 0) == -1) {
+    
+    // receive response from server
+    if (mq_receive(clientQueue, input, MAX_MESSAGE_SIZE, NULL) == -1) {
         printf("\033[1;33mClient:\033[0m Error while read init response from server.\n");
         exit(1);
     }
     else {
+        parseServerResponse();
         printf("\033[1;33mClient:\033[0m message received:\n\ttype: %ld, id: %d, message: %s \n", 
                 serverResponse.message_type,
                 serverResponse.message_text.id,
@@ -92,7 +98,7 @@ int main(int argc, char *argv[], char *env[]) {
         userID = serverResponse.message_type;
     }
 
-
+    //create warcher and sender
     pid = fork();
     if(pid == 0){
         struct sigaction actionStruct;
@@ -126,7 +132,8 @@ int main(int argc, char *argv[], char *env[]) {
 //--------------------------------------------------------------------------------------------
 
 void sendMessage() {
-    if (msgsnd(serverQueue, &clientRequest, sizeof(struct message_text), 0) == -1) {
+    parseClientRequest();
+    if (mq_send(serverQueue, output, strlen(output) + 1, clientRequest.message_type) == -1) {
         printf("\033[1;33mClient:\033[0m Error while sending request to server.\n");
     }
     else {
@@ -283,14 +290,17 @@ void sender() {
 void catcher() {
     while (1) {
         // read an incoming message, with priority order
-        if (msgrcv(clientQueue, &serverResponse, sizeof(struct message_text), -200, 0) == -1) {
-            fprintf(stderr, "\033[1;33mClient:\033[0m Error while reading input data.\n");
-        } else {
-            printf("\033[1;33mClient:\033[0m message received:\n\ttype: %ld, id: %d, message: %s \n\n", 
-                serverResponse.message_type, 
-                serverResponse.message_text.id,
-                serverResponse.message_text.buf
-            );
+        if (mq_receive(clientQueue, input, MAX_MESSAGE_SIZE, NULL) == -1) {
+            printf("\033[1;33mClient:\033[0m Error while read init response from server.\n");
+            continue;
+        }
+        else {
+            parseServerResponse();
+            printf("\033[1;33mClient:\033[0m message received:\n\ttype: %ld, id: %d, message: %s \n", 
+                    serverResponse.message_type,
+                    serverResponse.message_text.id,
+                    serverResponse.message_text.buf
+                );
         }
 
         if(serverResponse.message_type == SHUTDOWN){
@@ -339,18 +349,28 @@ void endClient() {
     clientRequest.message_type = STOP;
     sprintf(clientRequest.message_text.buf, "STOP from client %d", userID);
 
-    if (msgsnd(serverQueue, &clientRequest, sizeof(struct message_text), 0) == -1) {
+    parseClientRequest();
+
+    if (mq_send(serverQueue, output, strlen(output) + 1, clientRequest.message_type) == -1) {
         fprintf(stderr, "\033[1;33mClient:\033[0m Error while sending data about STOP.\n");
     }
     else {
         printf("\033[1;33mClient:\033[0m Send information about STOP.\n");
     }
-    
-    if (msgctl(clientQueue, IPC_RMID, NULL) == -1) {
-        printf("\033[1;33mClient:\033[0m Error while closing client queue.\n");
-        exit(1);
+
+
+    if (mq_close(serverQueue) == -1) {
+        printf("\033[1;33mClient:\033[0m Error while closing server queue.\n");
     }
-    
+
+    if (mq_close(clientQueue) == -1) {
+        printf("\033[1;33mClient:\033[0m Error while closing client queue.\n");
+    }
+
+    if (mq_unlink(clientQueueName) == -1) {
+        printf("\033[1;33mClient:\033[0m Error while remove client queue.\n");
+    }
+
     kill(pid, 9);
     printf("\033[1;33mClient:\033[0m Close.\n");
     exit(0);
@@ -359,4 +379,29 @@ void endClient() {
 void handleSIGINT(int signalNumber) {
     printf("\033[1;33mClient:\033[0m Receive signal SIGINT.\n");
     endClient();
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+void parseServerResponse() {
+    struct StringArray msgArray = explode(input, strlen(input), '|');
+    if(msgArray.size != 4) {
+        printf("\033[1;32mServer:\033[0m Incorrect input data.\n");
+        return;
+    }
+
+    serverResponse.message_type = strtol(msgArray.data[0], NULL, 0);
+    serverResponse.message_text.id = strtol(msgArray.data[1], NULL, 0);
+    serverResponse.message_text.additionalArg = strtol(msgArray.data[2], NULL, 0);
+    memcpy(serverResponse.message_text.buf, msgArray.data[3], strlen(msgArray.data[3]));
+}
+
+void parseClientRequest() {
+    sprintf(output, 
+        "%ld|%d|%d|%s", 
+        clientRequest.message_type, 
+        clientRequest.message_text.id, 
+        clientRequest.message_text.additionalArg, 
+        clientRequest.message_text.buf
+    );
 }

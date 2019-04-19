@@ -15,16 +15,14 @@
 
 #include "server_const.h"
 
-//obsłuch sygnałów to to to nie działa chyba
-
 int nextClientID = 0;
 mqd_t clientsQueueId[MAX_CLIENTS_COUNT];
 
 int groupsSize[MAX_CLIENTS_COUNT];
 int friendsGroups[MAX_CLIENTS_COUNT][MAX_GROUP_SIZE];
 
-char input [MAX_MESSAGE_SIZE];
-char output [MAX_MESSAGE_SIZE];
+char input[MAX_MESSAGE_SIZE];
+char output[MAX_MESSAGE_SIZE];
 
 int actualUserId = 0;
 int activeUserCount = 0;
@@ -53,7 +51,7 @@ void handleSIGINT(int signalNumber);
 
 int main(int argc, char *argv[], char *env[]) {
     // queue descriptors
-    mqd_t serverQueue, qd_client;
+    mqd_t serverQueue;
     struct mq_attr attr;
 
     attr.mq_flags = 0;
@@ -80,11 +78,6 @@ int main(int argc, char *argv[], char *env[]) {
 
     // start listening on user requests
     printf("\033[1;32mServer:\033[0m Server is running\n");
-
-
-//a gdyby tak wziąść i sparsować to wejście na tą moją strukturkę !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//przerobić trzeba maina, inta, i sygnał stopu
-//dorobić zamykanie kolejek klienta, zrobić to w obsłudze stopu
 
     while (runServer) {
         // get the oldest message with highest priority
@@ -178,7 +171,8 @@ void executeCommand() {
 
     outputMsg.message_text.id = SERVER_ID;
     outputMsg.message_type = actualUserId;
-    
+
+    free(msgArray.data);    
 }
 
 int userExist(int userId) {
