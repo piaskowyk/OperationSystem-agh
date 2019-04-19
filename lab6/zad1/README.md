@@ -1,2 +1,6 @@
 Aby skompilować projekt i uruchomić testy należy uruchomić polecenie:
->./run.sh
+>./make
+Następnie uruchomić serwer poleceniem:
+>./server
+Następnie w osobnych oknach konsoli uruchomić klientów:
+>./client
