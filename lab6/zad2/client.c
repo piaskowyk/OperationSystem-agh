@@ -384,16 +384,28 @@ void handleSIGINT(int signalNumber) {
 //----------------------------------------------------------------------------------------------------------------
 
 void parseServerResponse() {
+
     struct StringArray msgArray = explode(input, strlen(input), '|');
-    if(msgArray.size != 4) {
-        printf("\033[1;32mServer:\033[0m Incorrect input data.\n");
-        return;
+
+    if(msgArray.size > 0) serverResponse.message_type = strtol(msgArray.data[0], NULL, 0);
+    else serverResponse.message_type = ERROR;
+
+    if(msgArray.size > 1) serverResponse.message_text.id = strtol(msgArray.data[1], NULL, 0);
+    else serverResponse.message_text.id = ERROR;
+
+    if(msgArray.size > 2) serverResponse.message_text.additionalArg = strtol(msgArray.data[2], NULL, 0);
+    else serverResponse.message_text.additionalArg = ERROR;
+
+    if(msgArray.size > 3) {
+        int len = strlen(msgArray.data[3]);
+        memcpy(serverResponse.message_text.buf, msgArray.data[3], len);
+        serverResponse.message_text.buf[len] = '\0';
+    }
+    else {
+        serverResponse.message_text.buf[0] = '\0';
     }
 
-    serverResponse.message_type = strtol(msgArray.data[0], NULL, 0);
-    serverResponse.message_text.id = strtol(msgArray.data[1], NULL, 0);
-    serverResponse.message_text.additionalArg = strtol(msgArray.data[2], NULL, 0);
-    memcpy(serverResponse.message_text.buf, msgArray.data[3], strlen(msgArray.data[3]));
+    free(msgArray.data);
 }
 
 void parseClientRequest() {

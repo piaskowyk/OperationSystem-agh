@@ -49,6 +49,9 @@ void _2oneCMD();
 
 void handleSIGINT(int signalNumber);
 
+void parseInputMsg();
+void parseOutputMsg();
+
 int main(int argc, char *argv[], char *env[]) {
     // queue descriptors
     mqd_t serverQueue;
@@ -82,11 +85,14 @@ int main(int argc, char *argv[], char *env[]) {
     while (runServer) {
         // get the oldest message with highest priority
         if (mq_receive(serverQueue, input, MAX_MESSAGE_SIZE, NULL) == -1) {
-            fprintf(stderr, "\033[1;32mServer:\033[0m Error while reading input data. errno = %d\n", errno);
+            if(EINTR != errno) { //ignore interapt by SIGINT
+                fprintf(stderr, "\033[1;32mServer:\033[0m Error while reading input data. errno = %d\n", errno);
+            }
             continue;
         } 
         else {
-            printf("\033[1;32mServer:\033[0m message received: %s \n", input);
+            parseInputMsg();
+            printf("\033[1;32mServer:\033[0m message received: %s\n\t%s \n", typeToStr(inputMsg.message_type), input);
             executeCommand();
         }
 
@@ -110,19 +116,6 @@ int main(int argc, char *argv[], char *env[]) {
 }
 
 void executeCommand() {
-    //default value
-    inputMsg.message_type = 0;
-    //parsing inpit arguments do message struct
-    struct StringArray msgArray = explode(input, strlen(input), '|');
-    if(msgArray.size != 4) {
-        printf("\033[1;32mServer:\033[0m Incorrect input data.\n");
-        return;
-    }
-
-    inputMsg.message_type = strtol(msgArray.data[0], NULL, 0);
-    inputMsg.message_text.id = strtol(msgArray.data[1], NULL, 0);
-    inputMsg.message_text.additionalArg = strtol(msgArray.data[2], NULL, 0);
-    memcpy(inputMsg.message_text.buf, msgArray.data[3], strlen(msgArray.data[3]));
 
     actualUserId = inputMsg.message_text.id;
 
@@ -170,9 +163,7 @@ void executeCommand() {
     }
 
     outputMsg.message_text.id = SERVER_ID;
-    outputMsg.message_type = actualUserId;
-
-    free(msgArray.data);    
+    outputMsg.message_type = actualUserId;   
 }
 
 int userExist(int userId) {
@@ -195,7 +186,10 @@ void prepareMessage() {
     strftime(date, 21, "%d-%m-%Y_%H:%M:%S", localtime(&now));
     sprintf(tmp, "from %d, %s - %s", actualUserId, inputMsg.message_text.buf, date);
     memcpy(outputMsg.message_text.buf, tmp, 256);
-    outputMsg.message_text.buf[255] = '\0';
+    
+    int len = strlen(tmp);
+    if(len > 255) len = 255;
+    outputMsg.message_text.buf[len] = '\0';
 }
 
 int sendMessage(int id, int type) {
@@ -326,7 +320,8 @@ void friendsCMD() {
         if(
             friendsGroups[actualUserId][groupSize] >= 0 && 
             userExist(friendsGroups[actualUserId][groupSize]) &&
-            !existInGroup(actualUserId, friendsGroups[actualUserId][groupSize])
+            !existInGroup(actualUserId, friendsGroups[actualUserId][groupSize]) &&
+            friendsGroups[actualUserId][groupSize] != actualUserId
         ) {
             groupSize++;
         }
@@ -357,7 +352,8 @@ void addCMD() {
         if(
             friendsGroups[actualUserId][groupSize] >= 0 && 
             userExist(friendsGroups[actualUserId][groupSize]) &&
-            !existInGroup(actualUserId, friendsGroups[actualUserId][groupSize])
+            !existInGroup(actualUserId, friendsGroups[actualUserId][groupSize]) &&
+            friendsGroups[actualUserId][groupSize] != actualUserId
         ) {
             groupSize++;
         }
@@ -477,4 +473,40 @@ void _2oneCMD() {
         sprintf(outputMsg.message_text.buf, "2ONE - OK, send message");
     }
 
+}
+
+//----------------------------------------------------------------------
+
+void parseInputMsg() {
+    struct StringArray msgArray = explode(input, strlen(input), '|');
+
+    if(msgArray.size > 0) inputMsg.message_type = strtol(msgArray.data[0], NULL, 0);
+    else inputMsg.message_type = ERROR;
+
+    if(msgArray.size > 1) inputMsg.message_text.id = strtol(msgArray.data[1], NULL, 0);
+    else inputMsg.message_text.id = ERROR;
+
+    if(msgArray.size > 2) inputMsg.message_text.additionalArg = strtol(msgArray.data[2], NULL, 0);
+    else inputMsg.message_text.additionalArg = ERROR;
+
+    if(msgArray.size > 3) {
+        int len = strlen(msgArray.data[3]);
+        memcpy(inputMsg.message_text.buf, msgArray.data[3], len);
+        inputMsg.message_text.buf[len] = '\0';
+    }
+    else {
+        inputMsg.message_text.buf[0] = '\0';
+    }
+
+    free(msgArray.data);
+}
+
+void parseOutputMsg() {
+    sprintf(output, 
+        "%ld|%d|%d|%s", 
+        outputMsg.message_type, 
+        outputMsg.message_text.id, 
+        outputMsg.message_text.additionalArg, 
+        outputMsg.message_text.buf
+    );
 }
