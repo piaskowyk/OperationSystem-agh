@@ -29,6 +29,7 @@ int runServer = 1;
 void executeCommand(struct message* input, struct message* output);
 int userExist(int userId);
 void sendShutdownToAllClients();
+int sendMessage(int id, struct message* output, int type);
 
 void stopCMD(struct message* input, struct message* output);
 void listCMD(struct message* input, struct message* output);
@@ -93,17 +94,8 @@ int main(int argc, char *argv[], char *env[]) {
         }
 
         if(message.message_type == STOP) continue;
-        
-        // send reply message to client
-        if (
-            userExist(actualUserId) && 
-            msgsnd(clientsQueueId[actualUserId], &response, sizeof(struct message_text), 0) == -1
-        ) {
-            fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, 1errno = %d\n", errno);
-        }
-        else {
-            printf("\033[1;32mServer:\033[0m send response to client - %d.\n\n", actualUserId);
-        }
+
+        sendMessage(actualUserId, &response, 0);
         
     }
 
@@ -124,7 +116,7 @@ void executeCommand(struct message* input, struct message* output) {
     if(!userExist(actualUserId) && input->message_type != INIT){
         sprintf(output->message_text.buf, "User not exist.");
         output->message_text.id = SERVER_ID;
-        output->message_type = 500;
+        output->message_type = ERROR;
         return;
     }
 
@@ -189,13 +181,25 @@ void prepareMessage(struct message* input, struct message* output) {
     sprintf(output->message_text.buf, "from %d, %s - %s", actualUserId, input->message_text.buf, date);
 }
 
-int sendMessage(int id, struct message* output) {
-    if (userExist(id) && msgsnd(clientsQueueId[id], &output, sizeof(struct message_text), 0) == -1) {
-        fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, 2errno = %d\n", errno);
+int sendMessage(int id, struct message* output, int type) {
+    // printf("id: %d\n", id);
+    // printf("q id: %d\n", clientsQueueId[id]);
+    // printf("m type: %ld\n", output->message_type);
+    // printf("m id: %d\n", output->message_text.id);
+    // printf("m addition: %d\n", output->message_text.additionalArg);
+    // printf("m buf: %s\n", output->message_text.buf);
+
+    if (userExist(id) && msgsnd(clientsQueueId[id], output, sizeof(struct message_text), 0) == -1) {
+        fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, errno = %d\n", errno);
         return -1;
     }
     else {
-        printf("\033[1;32mServer:\033[0m send response to client %d from %d.\n", id, actualUserId);
+        if(type == 0){
+            printf("\033[1;32mServer:\033[0m send response to client - %d.\n\n", actualUserId);
+        }
+        else {
+            printf("\033[1;32mServer:\033[0m send message to client %d from %d.\n", id, actualUserId);
+        }
         return 1;
     }
 }
@@ -230,7 +234,7 @@ void sendShutdownToAllClients() {
     for(int i = 0; i < nextClientID; i++){
         if(!userExist(i)) continue;
         if (msgsnd(clientsQueueId[i], &msg, sizeof(struct message_text), 0) == -1) {
-            fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, 3errno = %d\n", errno);
+            fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, errno = %d\n", errno);
         }
         else {
             printf("\033[1;32mServer:\033[0m Send SHUTDOWN signal.\n");
@@ -268,7 +272,7 @@ void stopCMD(struct message* input, struct message* output) {
         }
     }
 
-    sprintf(output->message_text.buf, "User is removed.");
+    sprintf(output->message_text.buf, "STOP - User is removed.");
     activeUserCount--;
     
     if(activeUserCount == 0) {
@@ -293,7 +297,7 @@ void friendsCMD(struct message* input, struct message* output) {
     struct StringArray idList = explode(input->message_text.buf, strlen(input->message_text.buf), ',');
     
     if(idList.size > MAX_GROUP_SIZE){
-        sprintf(output->message_text.buf, "To many users.");
+        sprintf(output->message_text.buf, "FRIENDS - To many users.");
         return;
     }
 
@@ -311,10 +315,10 @@ void friendsCMD(struct message* input, struct message* output) {
     groupsSize[actualUserId] = groupSize;
 
     if(groupSize == 0) {
-        sprintf(output->message_text.buf, "Empty group.");
+        sprintf(output->message_text.buf, "FRIENDS - Empty group.");
     }
     else {
-        sprintf(output->message_text.buf, "Create group with size %d.", groupsSize[actualUserId]);
+        sprintf(output->message_text.buf, "FRIENDS - Create group with size %d.", groupsSize[actualUserId]);
     }
     free(idList.data);
 }
@@ -342,10 +346,10 @@ void addCMD(struct message* input, struct message* output) {
     groupsSize[actualUserId] = groupSize;
 
     if(groupSize == 0) {
-        sprintf(output->message_text.buf, "Empty group.");
+        sprintf(output->message_text.buf, "ADD - Empty group.");
     }
     else {
-        sprintf(output->message_text.buf, "Create group with size %d.", groupsSize[actualUserId]);
+        sprintf(output->message_text.buf, "ADD - Create group with size %d.", groupsSize[actualUserId]);
     }
     free(idList.data);
 }
@@ -373,10 +377,10 @@ void dellCMD(struct message* input, struct message* output) {
     groupsSize[userId] = groupIndex;
 
     if(groupIndex == 0) {
-        sprintf(output->message_text.buf, "Empty group.");
+        sprintf(output->message_text.buf, "DEL - Empty group.");
     }
     else {
-        sprintf(output->message_text.buf, "New group size is %d.", groupsSize[userId]);
+        sprintf(output->message_text.buf, "DEL - New group size is %d.", groupsSize[userId]);
     }
     free(idList.data);
 }
@@ -385,7 +389,7 @@ void initCMD(struct message* input, struct message* output) {
     int userQueueId = strtol(input->message_text.buf, NULL, 0);
     
     if(userQueueExist(userQueueId)){
-        sprintf(output->message_text.buf, "User already exist.");
+        sprintf(output->message_text.buf, "INIT - User already exist.");
         output->message_type = -1;
     }
     else {
@@ -398,7 +402,7 @@ void initCMD(struct message* input, struct message* output) {
             activeUserCount++;
         }
         else {
-            sprintf(output->message_text.buf, "Too many clients.");
+            sprintf(output->message_text.buf, "INIT - Too many clients.");
             output->message_type = -1;
         }
     }
@@ -418,11 +422,10 @@ void _2allCMD(struct message* input, struct message* output) {
 
     int sendCounter = 0;
     for(int i = 0; i < nextClientID; i++) {
-        if(i != actualUserId && sendMessage(i, output)) sendCounter++;
+        if(i != actualUserId && sendMessage(i, output, 1)) sendCounter++;
     }
 
-    sprintf(output->message_text.buf, "Send %d/%d message", sendCounter, nextClientID-1);
-    sendMessage(actualUserId, output);
+    sprintf(output->message_text.buf, "2ALL - Send %d/%d message", sendCounter, nextClientID-1);
 }
 
 void _2friendsCMD(struct message* input, struct message* output) {
@@ -430,22 +433,21 @@ void _2friendsCMD(struct message* input, struct message* output) {
 
     int sendCounter = 0;
     for(int i = 0; i < groupsSize[actualUserId]; i++) {
-        if(friendsGroups[actualUserId][i] != actualUserId && sendMessage(i, output)) sendCounter++;
+        if(friendsGroups[actualUserId][i] != actualUserId && sendMessage(friendsGroups[actualUserId][i], output, 1)) sendCounter++;
     }
 
-    sprintf(output->message_text.buf, "Send %d/%d message", sendCounter, groupsSize[actualUserId]-1);
-    sendMessage(actualUserId, output);
+    sprintf(output->message_text.buf, "2FRIENDS Send %d/%d message", sendCounter, groupsSize[actualUserId]);
 }
 
 void _2oneCMD(struct message* input, struct message* output) {
     prepareMessage(input, output);
 
     if(!userExist(input->message_text.additionalArg)){
-        sprintf(output->message_text.buf, "Destination user (%d) not exist", input->message_text.additionalArg);
+        sprintf(output->message_text.buf, "2ONE - Destination user (%d) not exist", input->message_text.additionalArg);
+    }
+    else {
+        sendMessage(input->message_text.additionalArg, output, 1);
+        sprintf(output->message_text.buf, "2ONE - OK, send message");
     }
 
-    sendMessage(input->message_text.additionalArg, output);
-
-    sprintf(output->message_text.buf, "OK, send message");
-    sendMessage(actualUserId, output);
 }

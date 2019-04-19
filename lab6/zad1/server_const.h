@@ -6,6 +6,25 @@
 
 #define SHIFTID 100
 
+#define STOP 10
+#define LIST 11
+#define FRIENDS 12
+
+#define INIT 15
+#define ECHO 16
+#define _2ALL 17
+#define _2FRIENDS 18
+#define _2ONE 19
+
+#define ADD 23
+#define DEL 24
+
+#define SHUTDOWN 30
+
+#define SERVER_RESPONSE 100
+#define ERROR 500
+#define SERVER_ID -10
+
 struct message_text {
     int id;
     int additionalArg;
@@ -21,22 +40,6 @@ struct StringArray{
     unsigned int size;
     char** data;
 };
-
-#define STOP 10
-#define LIST 11
-#define FRIENDS 12
-#define ADD 13
-#define DEL 14
-#define INIT 15
-#define ECHO 16
-#define _2ALL 17
-#define _2FRIENDS 18
-#define _2ONE 19
-
-#define SHUTDOWN 20
-
-#define SERVER_RESPONSE 100
-#define SERVER_ID -10
 
 char* typeToStr(int type){
     switch(type){
@@ -63,6 +66,12 @@ char* typeToStr(int type){
         }break;
         case _2ONE:{
             return "2ONE";
+        }break;
+        case ADD:{
+            return "ADD";
+        }break;
+        case DEL:{
+            return "DEL";
         }break;
     }
 

@@ -147,7 +147,7 @@ int executeCommand(struct StringArray* commandArgs) {
         listCMD(commandArgs);
     }
     else if(strcmp(commandArgs->data[0], "FRIENDS") == 0) {
-        if(commandArgs->size != 2) return 0;
+        if(commandArgs->size != 1 && commandArgs->size != 2) return 0;
         clientRequest.message_type = FRIENDS;
         friendsCMD(commandArgs);
     }
@@ -190,49 +190,54 @@ int executeCommand(struct StringArray* commandArgs) {
     return 1;
 }
 
-void simpleAction(struct StringArray* commandArgs) {
-    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
-    clientRequest.message_text.buf[strlen(commandArgs->data[1])] = '\0';
+void simpleAction(struct StringArray* commandArgs, int index) {
+    memcpy(clientRequest.message_text.buf, commandArgs->data[index], strlen(commandArgs->data[index]));
+    clientRequest.message_text.buf[strlen(commandArgs->data[index])] = '\0';
 }
 
 //--------------------------------------------------------------------------------------------
 
 void stopCMD(struct StringArray* commandArgs) {
     runClient = 0;
-    sprintf(clientRequest.message_text.buf, "STOP from client %d", userID);
+    simpleAction(commandArgs, 0);
 }
 
 void listCMD(struct StringArray* commandArgs) {
-    sprintf(clientRequest.message_text.buf, "LIST");
+    simpleAction(commandArgs, 0);
 }
 
 void friendsCMD(struct StringArray* commandArgs) {
-    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+    if(commandArgs->size == 2) {
+        simpleAction(commandArgs, 1);
+    }
+    else {
+        clientRequest.message_text.buf[0] = '\0';
+    }
 }
 
 void addCMD(struct StringArray* commandArgs) {
-    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+    simpleAction(commandArgs, 1);
 }
 
 void dellCMD(struct StringArray* commandArgs) {
-    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+    simpleAction(commandArgs, 1);
 }
 
 void echoCMD(struct StringArray* commandArgs) {
-    simpleAction(commandArgs);
+    simpleAction(commandArgs, 1);
 }
 
 void _2allCMD(struct StringArray* commandArgs) {
-    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+    simpleAction(commandArgs, 1);
 }
 
 void _2friendsCMD(struct StringArray* commandArgs) {
-    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+    simpleAction(commandArgs, 1);
 }
 
 void _2oneCMD(struct StringArray* commandArgs) {
-    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
-    clientRequest.message_text.additionalArg = strtol(commandArgs->data[2], NULL, 0);
+    simpleAction(commandArgs, 2);
+    clientRequest.message_text.additionalArg = strtol(commandArgs->data[1], NULL, 0);
 }
 
 //--------------------------------------------------------------------------------------------
