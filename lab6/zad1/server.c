@@ -93,23 +93,24 @@ int main(int argc, char *argv[], char *env[]) {
         }
 
         if(message.message_type == STOP) continue;
-
+        
         // send reply message to client
         if (
             userExist(actualUserId) && 
             msgsnd(clientsQueueId[actualUserId], &response, sizeof(struct message_text), 0) == -1
         ) {
-            fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, errno = %d\n", errno);
+            fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, 1errno = %d\n", errno);
         }
         else {
-            printf("\033[1;32mServer:\033[0m send response to client - %d.\n", 
-                    actualUserId
-                );
+            printf("\033[1;32mServer:\033[0m send response to client - %d.\n\n", actualUserId);
         }
         
     }
 
     //end working of server
+    if (msgctl(qid, IPC_RMID, NULL) == -1) {
+        printf("\033[1;32mServer:\033[0m Error while closing client queue.\n");
+    }
 
     printf("\033[1;32mServer:\033[0m Server close.\n");
 
@@ -190,7 +191,7 @@ void prepareMessage(struct message* input, struct message* output) {
 
 int sendMessage(int id, struct message* output) {
     if (userExist(id) && msgsnd(clientsQueueId[id], &output, sizeof(struct message_text), 0) == -1) {
-        fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, errno = %d\n", errno);
+        fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, 2errno = %d\n", errno);
         return -1;
     }
     else {
@@ -227,8 +228,9 @@ void sendShutdownToAllClients() {
     msg.message_type = SHUTDOWN;
     sprintf(msg.message_text.buf, "STOP");
     for(int i = 0; i < nextClientID; i++){
-        if (!userExist(i) || msgsnd(clientsQueueId[i], &msg, sizeof(struct message_text), 0) == -1) {
-            fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, errno = %d\n", errno);
+        if(!userExist(i)) continue;
+        if (msgsnd(clientsQueueId[i], &msg, sizeof(struct message_text), 0) == -1) {
+            fprintf(stderr, "\033[1;32mServer:\033[0m Error while sending data, 3errno = %d\n", errno);
         }
         else {
             printf("\033[1;32mServer:\033[0m Send SHUTDOWN signal.\n");

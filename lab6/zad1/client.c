@@ -129,7 +129,7 @@ void sendMessage() {
         printf("\033[1;33mClient:\033[0m Error while sending request to server.\n");
     }
     else {
-        printf("\033[1;33mClient:\033[0m Send message to server.\n");
+        printf("\033[1;33mClient:\033[0m Send message %s to server.\n", typeToStr(clientRequest.message_type));
     }
 }
 
@@ -190,6 +190,11 @@ int executeCommand(struct StringArray* commandArgs) {
     return 1;
 }
 
+void simpleAction(struct StringArray* commandArgs) {
+    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+    clientRequest.message_text.buf[strlen(commandArgs->data[1])] = '\0';
+}
+
 //--------------------------------------------------------------------------------------------
 
 void stopCMD(struct StringArray* commandArgs) {
@@ -214,7 +219,7 @@ void dellCMD(struct StringArray* commandArgs) {
 }
 
 void echoCMD(struct StringArray* commandArgs) {
-    memcpy(clientRequest.message_text.buf, commandArgs->data[1], strlen(commandArgs->data[1]));
+    simpleAction(commandArgs);
 }
 
 void _2allCMD(struct StringArray* commandArgs) {
@@ -272,10 +277,10 @@ void sender() {
 void catcher() {
     while (1) {
         // read an incoming message, with priority order
-        if (msgrcv(clientQueue, &serverResponse, sizeof(struct message_text), -100, 0) == -1) {
+        if (msgrcv(clientQueue, &serverResponse, sizeof(struct message_text), -200, 0) == -1) {
             fprintf(stderr, "\033[1;33mClient:\033[0m Error while reading input data.\n");
         } else {
-            printf("\033[1;33mClient:\033[0m message received:\n\ttype: %ld, id: %d, message: %s \n", 
+            printf("\033[1;33mClient:\033[0m message received:\n\ttype: %ld, id: %d, message: %s \n\n", 
                 serverResponse.message_type, 
                 serverResponse.message_text.id,
                 serverResponse.message_text.buf
@@ -306,6 +311,8 @@ void executeFile(struct StringArray* commandArgs) {
     rewind(file);
 
     char* fileContent = calloc(fileSize, sizeof(char));
+    fread(fileContent, fileSize, sizeof(char), file);
+
     struct StringArray command = explode(fileContent, fileSize, '\n');
 
     for(int i = 0; i < command.size; i++) {
