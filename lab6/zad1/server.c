@@ -14,8 +14,6 @@
 
 #include "server_const.h"
 
-//obsłuch sygnałów to to to nie działa chyba
-
 int nextClientID = 0;
 int clientsQueueId[MAX_CLIENTS_COUNT];
 

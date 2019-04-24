@@ -13,8 +13,6 @@
 
 #include "server_const.h"
 
-//obsłuch sygnałów to to to nie działa chyba
-
 int mode = 0;
 int runClient = 1;
 int serverQueue, clientQueue;
