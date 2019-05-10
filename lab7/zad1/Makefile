@@ -1,18 +1,18 @@
 compile_command = gcc -Wall
 
-all: server client
+all: trucker test_loader
 
-server: server.c
-	$(compile_command) server.c -o ./server
+trucker: trucker.c
+	$(compile_command) trucker.c -o ./trucker
 
-test_server: server.c
-	gcc ./server.c -Wall -g -O0 -o ./test_server
+test_trucker: trucker.c
+	gcc ./trucker.c -Wall -g -O0 -o ./test_trucker
 
-client: client.c
-	$(compile_command) client.c -o ./client
+loader: loader.c
+	$(compile_command) loader.c -o ./loader
 
-test_client: client.c
-	gcc ./client.c -Wall -g -O0 -o ./test_client
+test_loader: loader.c
+	gcc ./loader.c -Wall -g -O0 -o ./test_loader
 
 clean:
-	rm -rf *.o server test_server client test_client
+	rm -rf *.o trucker test_trucker loader test_loader
