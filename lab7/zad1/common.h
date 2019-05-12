@@ -1,10 +1,10 @@
-#define PROJECT_ID 'M'
+#define PROJECT_ID 'A'
 
-#define MEM_LINE "/dev/MEM_LINE"
+#define MEM_LINE "/tmp/MEM_LINE"
 #define MEM_LINE_PARAM "/tmp/MEM_LINE_PARAM"
 
-#define SEM_LINE "/dev/SEM_LINE"
-#define SEM_LINE_PARAM "/dev/SEM_LINE_PARAM"
+#define SEM_LINE "/tmp/SEM_LINE"
+#define SEM_LINE_PARAM "/tmp/SEM_LINE_PARAM"
 
 #define STANDARD_PERMISSIONS 0660
 
@@ -48,16 +48,17 @@ void releaseSem(int semId) {
     }
 }
 
-int setUpShareMemory(const char * path, size_t size, int permission, int index) {
+int setUpShareMemory(const char * path, size_t size, int index) {
     key_t key;
     int ID;
-    if ((key = ftok(path, PROJECT_ID)) == (key_t) -1) {
-        fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while getting unique key (%d).\n", index);
+
+    if ((key = ftok(getenv("HOME"), PROJECT_ID)) == (key_t) -1) {
+        fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while getting unique key (%d) - errno: %d\n", index, errno);
         exit(111);
     }
 
-    if ((ID = shmget(key, size, permission)) == -1) {
-        fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while creating line (%d).\n", index);
+    if ((ID = shmget(key, size, IPC_CREAT | STANDARD_PERMISSIONS)) == -1) {
+        fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while creating line (%d) - errno: %d\n", index, errno);
         exit(112);
     }
 
@@ -67,7 +68,7 @@ int setUpShareMemory(const char * path, size_t size, int permission, int index) 
 int setUpSemaphore(const char * path, int defaultValue, int index) {
     key_t key;
     int semId;
-    if ((key = ftok(path, PROJECT_ID)) == -1) {
+    if ((key = ftok(getenv("HOME"), PROJECT_ID)) == -1) {
         fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while getting unique semaphore key (%d).\n", index);
         exit(111);
     }
