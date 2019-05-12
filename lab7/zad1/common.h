@@ -1,10 +1,10 @@
 #define PROJECT_ID 'A'
 
-#define MEM_LINE "/tmp/MEM_LINE"
-#define MEM_LINE_PARAM "/tmp/MEM_LINE_PARAM"
+#define MEM_LINE "MEM_LINE"
+#define MEM_LINE_PARAM "MEM_LINE_PARAM"
 
-#define SEM_LINE "/tmp/SEM_LINE"
-#define SEM_LINE_PARAM "/tmp/SEM_LINE_PARAM"
+#define SEM_LINE "SEM_LINE"
+#define SEM_LINE_PARAM "SEM_LINE_PARAM"
 
 #define STANDARD_PERMISSIONS 0660
 
@@ -42,7 +42,7 @@ void releaseSem(int semId) {
     state.sem_num = 0;
     state.sem_flg = 0;
     state.sem_op = 1;
-    if (semop (semId, &state, 1) == -1) {
+    if (semop(semId, &state, 1) == -1) {
         fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while release line.\n");
         exit(131);
     }
@@ -51,8 +51,10 @@ void releaseSem(int semId) {
 int setUpShareMemory(const char * path, size_t size, int index) {
     key_t key;
     int ID;
+    char name[100];
+    sprintf(name, "./%s", path);
 
-    if ((key = ftok(getenv("HOME"), PROJECT_ID)) == (key_t) -1) {
+    if ((key = ftok(name, PROJECT_ID)) == (key_t) -1) {
         fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while getting unique key (%d) - errno: %d\n", index, errno);
         exit(111);
     }
@@ -68,7 +70,10 @@ int setUpShareMemory(const char * path, size_t size, int index) {
 int setUpSemaphore(const char * path, int defaultValue, int index) {
     key_t key;
     int semId;
-    if ((key = ftok(getenv("HOME"), PROJECT_ID)) == -1) {
+    char name[100];
+    sprintf(name, "./%s", path);
+
+    if ((key = ftok(name, PROJECT_ID)) == -1) {
         fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while getting unique semaphore key (%d).\n", index);
         exit(111);
     }
@@ -76,9 +81,10 @@ int setUpSemaphore(const char * path, int defaultValue, int index) {
         fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while creating semaphore (%d).\n", index);
         exit(112);
     }
+
     // initial values
     semSetter.val = defaultValue;
-    if (semctl (semId, 0, SETVAL, semSetter) == -1) {
+    if (semctl(semId, 0, SETVAL, semSetter) == -1) {
         fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while setting value of semaphore (%d).\n", index);
         exit(113);
     }
@@ -89,6 +95,12 @@ int setUpSemaphore(const char * path, int defaultValue, int index) {
 void setFreeWeightOnLine(unsigned int weight, struct ShareMemory shareMemory) {
     blockSem(shareMemory.sem);
     unsigned int* lineParam = (unsigned int *) shmat(shareMemory.mem, 0, 0);
-    *lineParam = weight;
+    lineParam[0] = weight;
     releaseSem(shareMemory.sem);
+}
+
+long getTimestamp() {
+    struct timespec timestamp;
+    clock_gettime(CLOCK_MONOTONIC, &timestamp);
+    return timestamp.tv_nsec;
 }
