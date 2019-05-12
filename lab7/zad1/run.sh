@@ -1,8 +1,16 @@
 #!/bin/bash
 
 make clean
-make
+make loader
+make trucker
+
+# mkdir mem
+# touch mem/MEM_LINE
+# touch mem/MEM_LINE_PARAM
+# touch mem/SEM_LINE
+# touch mem/SEM_LINE_PARAM
 
 echo "Start:"
-./main commands.txt
+./trucker 10 10 10 &
+./loader 1
 echo "End"

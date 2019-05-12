@@ -24,6 +24,9 @@ void moveLine(struct Parcel* line, int len);
 
 int main(int argc, char *argv[], char *env[]) {
 
+    struct LineParams* lineParams;
+    struct Parcel* line;
+
     //parsing input arguments
     if(argc != 4) {
         printf("\033[1;32mTrucker:\033[0m Invalid count of input arguments.\n");
@@ -48,72 +51,67 @@ int main(int argc, char *argv[], char *env[]) {
     sigaction(SIGINT, &actionStruct, NULL);
 
     //create line and counters
-    struct ShareMemory lineSM, lineParamSM;
+    int lineSM, lineParamSM, semaphore;
 
     //create shared memory for line
-    lineSM.mem = setUpShareMemory(MEM_LINE, lineItemsCapacity * sizeof(struct Parcel), 1);
+    lineSM = setUpShareMemory(MEM_LINE, lineItemsCapacity * sizeof(struct Parcel), 1, TRUCKER);
 
     //create shared memory for tracker args
-    lineParamSM.mem = setUpShareMemory(MEM_LINE_PARAM, 10 * sizeof(unsigned int), 2);
+    lineParamSM = setUpShareMemory(MEM_LINE_PARAM, sizeof(struct LineParams), 2, TRUCKER);
+    
     //create semaphores
-    // semaphore for first free index in line
-    lineSM.sem = setUpSemaphore(SEM_LINE, 1, 1);//albo dać domyślną wartość 0
-
-    // count of free weight on line
-    lineParamSM.sem = setUpSemaphore(SEM_LINE_PARAM, 1, 2);// albo dać domyślną wartość 0
+    semaphore = setUpSemaphore(SEM, 1, TRUCKER);
 
     //save line parameters to shared memory
-    setFreeWeightOnLine(lineWeightCapacity, lineParamSM);
-    blockSem(lineParamSM.sem);
+    blockSem(semaphore, TRUCKER);
+    lineParams = getLineParams(lineParamSM, TRUCKER);
+    lineParams[0].freePlaces = lineItemsCapacity;
+    lineParams[0].freeWeight = lineWeightCapacity;
+    lineParams[0].len = lineItemsCapacity;
+    releaseLineParams(lineParams, TRUCKER);
+
     //clearLine
-    blockSem(lineSM.sem);
-    struct Parcel* lineClear = (struct Parcel*) shmat(lineSM.mem, 0, 0);
+    struct Parcel* lineClear = (struct Parcel*) shmat(lineSM, 0, 0);
     for(int i = 0; i < lineItemsCapacity; i++) {
         lineClear[i].timestamp = 0;
         lineClear[i].weight = 0;
         lineClear[i].workerId = 0;
     }
-    releaseSem(lineSM.sem);
+    releaseSem(semaphore, TRUCKER);
 
     //set up parameters
     int truckPlacesCount = 0;
-    int lineFreeWeightOnLine = lineWeightCapacity;
-    struct Parcel* line;
     int endOfLine = lineItemsCapacity - 1;
     int lineLen = lineItemsCapacity;
     //start main loop
     while (1) {
-        blockSem(lineSM.sem);
+        blockSem(semaphore, TRUCKER);
+        line = getLine(lineSM, TRUCKER);
+        lineParams = getLineParams(lineParamSM, TRUCKER);
 
-        line = (struct Parcel*) shmat(lineSM.mem, NULL, 0);
-        if(line == (void *)-1) {
-            fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while attache memory.\n");
-            exit(140);
-        }
-
-        moveLine(line, lineLen);
         if(line[endOfLine].weight > 0) {
             truckPlacesCount++;
-            lineFreeWeightOnLine -= line[endOfLine].weight;
-            setFreeWeightOnLine(lineFreeWeightOnLine, lineParamSM);
 
-            printf("\033[1;32mTrucker:\033[0m %ld, Get parcel: weight: %u, workerID: %u, timeDiff: %ld \n",
+            //set line params
+            lineParams[0].freePlaces++;
+            lineParams[0].freeWeight += line[endOfLine].weight;
+
+            printf("\033[1;32mTrucker:\033[0m %ld, Get parcel: weight: %u, workerID: %u, timeDiff: %ld, capacity: %d/%d  \n",
                     getTimestamp(),
                     line[endOfLine].weight,
                     line[endOfLine].workerId,
-                    getTimestamp() - line[endOfLine].timestamp
+                    getTimestamp() - line[endOfLine].timestamp,
+                    truckPlacesCount,
+                    truckCapacity
                 );
         }
         else {
             printf("\033[1;32mTrucker:\033[0m %ld, Waiting for parcel.\n", getTimestamp());
         }
-
-        if (shmdt(line) == -1) {
-            fprintf(stderr, "\033[1;32mTrucker:\033[0m %ld, Error while detach memory.\n", getTimestamp());
-            exit(141);
-        }
-
-        releaseSem(lineSM.sem);
+printf("%d,%d,%d\n", lineParams[0].freeWeight, lineParams[0].freePlaces, lineParams[0].len);
+        releaseLine(line, TRUCKER);
+        releaseLineParams(lineParams, TRUCKER);
+        releaseSem(semaphore, TRUCKER);
 
         if(truckPlacesCount == truckCapacity) {
             printf("\033[1;32mTrucker:\033[0m %ld, Truck is fully - leave factory.\n", getTimestamp());
@@ -124,17 +122,13 @@ int main(int argc, char *argv[], char *env[]) {
         if(endWork) {
             break;
         }
+
+        sleep(1);
     }
 
     //empty line
-    blockSem(lineSM.sem);
-//    blockSem(lineParamSM.sem);
-//    releaseSem(lineParamSM.sem);
-    line = (struct Parcel*) shmat(lineSM.mem, NULL, 0);
-    if(line == (void *)-1) {
-        fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while attache memory.\n");
-        exit(140);
-    }
+    blockSem(semaphore, TRUCKER);
+    line = getLine(lineSM, TRUCKER);
 
     for(int i = 0; i < lineLen; i++) {
 
@@ -143,7 +137,7 @@ int main(int argc, char *argv[], char *env[]) {
         }
 
         if(line[endOfLine].weight > 0) {
-            printf("\033[1;32mTrucker:\033[0m %ld, Get parcel: weight: %u, workerID: %u, timeDiff: %ld \n",
+            printf("\033[1;32mTrucker:\033[0m %ld, Get parcel (end): weight: %u, workerID: %u, timeDiff: %ld \n",
                    getTimestamp(),
                    line[endOfLine].weight,
                    line[endOfLine].workerId,
@@ -151,34 +145,29 @@ int main(int argc, char *argv[], char *env[]) {
             );
         }
         else {
-            printf("\033[1;32mTrucker:\033[0m %ld, Waiting for parcel.\n", getTimestamp());
+            printf("\033[1;32mTrucker:\033[0m %ld, Waiting for parcel (end).\n", getTimestamp());
         }
 
         if(truckPlacesCount == truckCapacity) {
-            printf("\033[1;32mTrucker:\033[0m %ld, Truck is fully - leave factory.\n", getTimestamp());
+            printf("\033[1;32mTrucker:\033[0m %ld, Truck is fully - leave factory (end).\n", getTimestamp());
             truckPlacesCount = 0;
-            printf("\033[1;32mTrucker:\033[0m %ld, New truck arrived to factory.\n", getTimestamp());
+            printf("\033[1;32mTrucker:\033[0m %ld, New truck arrived to factory (end).\n", getTimestamp());
         }
     }
 
 
-    if (semctl(lineSM.sem, 0, IPC_RMID) == -1) {
-        fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while removing semaphore (1).\n");
+    if (semctl(semaphore, 0, IPC_RMID) == -1) {
+        fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while removing semaphore.\n");
         exit(114);
     }
 
-    if (semctl(lineParamSM.sem, 0, IPC_RMID) == -1) {
-        fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while removing semaphore (2).\n");
-        exit(114);
-    }
-
-    if (shmctl(lineSM.mem, 0, IPC_RMID) == -1) {
+    if (shmctl(lineSM, 0, IPC_RMID) == -1) {
         fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while removing shared memory (1).\n");
         exit(114);
     }
 
-    if (shmctl(lineParamSM.mem, 0, IPC_RMID) == -1) {
-        fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while removing semaphore (2).\n");
+    if (shmctl(lineParamSM, 0, IPC_RMID) == -1) {
+        fprintf(stderr, "\033[1;32mTrucker:\033[0m Error while removing shared memory (2).\n");
         exit(114);
     }
 
@@ -190,13 +179,4 @@ int main(int argc, char *argv[], char *env[]) {
 void handleSIGINT() {
     printf("\033[1;32mTrucker:\033[0m Receive signal SIGINT.\n");
     endWork = 1;
-}
-
-void moveLine(struct Parcel* line, int len) {
-    for(int i = 1; i < len; i ++) {
-        line[i] = line[i - 1];
-    }
-    line[0].workerId = 0;
-    line[0].weight = 0;
-    line[0].timestamp = 0;
 }
