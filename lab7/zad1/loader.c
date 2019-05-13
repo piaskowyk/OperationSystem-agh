@@ -63,22 +63,23 @@ int main(int argc, char *argv[], char *env[]) {
     releaseLineParams(lineParams, LOADER);
 
     for(int i = 0; i < workersCount; i++) {
-        fork();
+        pid_t pid = fork();
+        if(pid == 0) break;
     }
 
     //set up parameters
     int iteration = 0;
     pid_t ownPid = getpid();
+    int tmp = 0;
 
     //start main loop
     while(!endWork && ((argc > 3 && parcelCount > iteration))) {
-
+        printf("\033[1;33mLoader:\033[0m %ld, Waiting for line. PID: %d\n", getTimestamp(), ownPid);
         blockSem(semaphore, LOADER);
         line = getLine(lineSM, LOADER);
         lineParams = getLineParams(lineParamSM, LOADER);
 
-        if(lineParams[0].freeWeight >= parcelWeight && lineParams[0].freePlaces > 0) {
-            moveLine(line, lineParams[0].len);
+        if(lineParams[0].freeWeight >= parcelWeight && lineParams[0].freePlaces > 0 && line[0].weight == 0) {
 
             //push parcel
             line[0].workerId = ownPid;
@@ -100,17 +101,19 @@ int main(int argc, char *argv[], char *env[]) {
                    );
 
             if(argc > 3) iteration++;
+            tmp = 1;
         }
         else {
-            printf("%d,%d,%d\n", lineParams[0].freeWeight, lineParams[0].freePlaces, lineParams[0].len);
-            printf("\033[1;33mLoader:\033[0m %ld, Waiting for line.\n", getTimestamp());
+            tmp = 0;
+            printf("\033[1;33mLoader:\033[0m %ld, Waiting places on line. PID: %d\n", getTimestamp(), ownPid);
         }
-
+        printf("w:%d,p:%d,l:%d\n", lineParams[0].freeWeight, lineParams[0].freePlaces, lineParams[0].len);
         releaseLine(line, LOADER);
         releaseLineParams(lineParams, LOADER);
         releaseSem(semaphore, LOADER);
 
-        sleep(1);
+        if(DEBUG) sleep(1);
+        if(tmp) sleep(1);
     }
 
     printf("\033[1;33mLoader:\033[0m %ld, END.\n", getTimestamp());

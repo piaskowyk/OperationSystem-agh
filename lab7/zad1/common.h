@@ -10,6 +10,8 @@
 
 #define STANDARD_PERMISSIONS 0666
 
+#define DEBUG 0
+
 struct ShareMemory {
     int mem; // id memory
     int sem; // id semaphore
@@ -167,7 +169,7 @@ void releaseLineParams(struct LineParams* params, int type) {
 }
 
 void moveLine(struct Parcel* line, int len) {
-    for(int i = 1; i < len; i ++) {
+    for(int i = len - 1; i > 0; i--) {
         line[i] = line[i - 1];
     }
     line[0].workerId = 0;

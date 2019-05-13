@@ -18,6 +18,7 @@
 #include "common.h"
 
 int endWork = 0;
+int run = 1;
 
 void handleSIGINT();
 void moveLine(struct Parcel* line, int len);
@@ -28,7 +29,7 @@ int main(int argc, char *argv[], char *env[]) {
     struct Parcel* line;
 
     //parsing input arguments
-    if(argc != 4) {
+    if(argc != 4 && argc != 5) {
         printf("\033[1;32mTrucker:\033[0m Invalid count of input arguments.\n");
         exit(100);
     }
@@ -36,6 +37,12 @@ int main(int argc, char *argv[], char *env[]) {
     unsigned int truckCapacity = strtol(argv[1], NULL, 0);
     unsigned int lineItemsCapacity = strtol(argv[2], NULL, 0);
     unsigned int lineWeightCapacity = strtol(argv[3], NULL, 0);
+
+    unsigned int forceStopParcelCounter = 0;
+
+    if(argc == 5) {
+        forceStopParcelCounter = strtol(argv[4], NULL, 0);
+    }
 
     if(truckCapacity < 1 || lineItemsCapacity < 1 || lineWeightCapacity < 1) {
         printf("\033[1;32mTrucker:\033[0m Invalid input arguments, must be greater than 0.\n");
@@ -79,10 +86,19 @@ int main(int argc, char *argv[], char *env[]) {
     }
     releaseSem(semaphore, TRUCKER);
 
+    printf("Delay for start 5s\n");
+    for(int i = 0; i < 5; i++){
+        printf("%d\n", 5 - i);
+        sleep(1);
+    }
+    printf("START");
+
     //set up parameters
     int truckPlacesCount = 0;
     int endOfLine = lineItemsCapacity - 1;
     int lineLen = lineItemsCapacity;
+    int counter = 0;
+
     //start main loop
     while (1) {
         blockSem(semaphore, TRUCKER);
@@ -91,10 +107,15 @@ int main(int argc, char *argv[], char *env[]) {
 
         if(line[endOfLine].weight > 0) {
             truckPlacesCount++;
-
+            
             //set line params
             lineParams[0].freePlaces++;
             lineParams[0].freeWeight += line[endOfLine].weight;
+
+            //get parcel
+            line[endOfLine].weight = 0;
+            line[endOfLine].timestamp = 0;
+            line[endOfLine].workerId = 0;
 
             printf("\033[1;32mTrucker:\033[0m %ld, Get parcel: weight: %u, workerID: %u, timeDiff: %ld, capacity: %d/%d  \n",
                     getTimestamp(),
@@ -104,11 +125,20 @@ int main(int argc, char *argv[], char *env[]) {
                     truckPlacesCount,
                     truckCapacity
                 );
+
+            counter++;
+            if(counter == forceStopParcelCounter){
+                printf("\033[1;32mTrucker:\033[0m %ld, Force stop, receive %d parcels.\n", getTimestamp(), counter);
+                endWork = 1;
+            }
         }
         else {
             printf("\033[1;32mTrucker:\033[0m %ld, Waiting for parcel.\n", getTimestamp());
         }
-printf("%d,%d,%d\n", lineParams[0].freeWeight, lineParams[0].freePlaces, lineParams[0].len);
+
+        moveLine(line, lineLen);
+
+        printf("w:%d,p:%d,l:%d\n", lineParams[0].freeWeight, lineParams[0].freePlaces, lineParams[0].len);
         releaseLine(line, TRUCKER);
         releaseLineParams(lineParams, TRUCKER);
         releaseSem(semaphore, TRUCKER);
@@ -123,7 +153,7 @@ printf("%d,%d,%d\n", lineParams[0].freeWeight, lineParams[0].freePlaces, linePar
             break;
         }
 
-        sleep(1);
+        if(DEBUG) sleep(1);
     }
 
     //empty line
@@ -132,9 +162,7 @@ printf("%d,%d,%d\n", lineParams[0].freeWeight, lineParams[0].freePlaces, linePar
 
     for(int i = 0; i < lineLen; i++) {
 
-        for(int j = 1; j < lineLen; j ++) {
-            line[j] = line[j - 1];
-        }
+        moveLine(line, lineLen);
 
         if(line[endOfLine].weight > 0) {
             printf("\033[1;32mTrucker:\033[0m %ld, Get parcel (end): weight: %u, workerID: %u, timeDiff: %ld \n",
