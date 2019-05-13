@@ -15,4 +15,4 @@ test_loader: loader.c
 	gcc ./loader.c -Wall -g -O0 -o ./test_loader
 
 clean:
-	rm -rf *.o trucker test_trucker loader test_loader
+	rm -rf *.o trucker test_trucker loader test_loader mem

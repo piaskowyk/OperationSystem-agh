@@ -1,9 +1,9 @@
 #define PROJECT_ID 'A'
 
-#define MEM_LINE "MEM_LINE"
-#define MEM_LINE_PARAM "MEM_LINE_PARAM"
+#define MEM_LINE "mem/MEM_LINE"
+#define MEM_LINE_PARAM "mem/MEM_LINE_PARAM"
 
-#define SEM "SEM"
+#define SEM "mem/SEM"
 
 #define TRUCKER 1
 #define LOADER 2
