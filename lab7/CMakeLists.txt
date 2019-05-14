@@ -3,4 +3,6 @@ project(lab7 C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(lab7 zad1/trucker.c)
+link_libraries("rt")
+link_libraries("pthread")
+add_executable(lab7 zad2/loader.c zad2/common.h)
