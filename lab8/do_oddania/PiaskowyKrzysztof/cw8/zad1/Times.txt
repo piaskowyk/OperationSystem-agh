@@ -1,0 +1,54 @@
+Thread count: 1, Image size: 640 x 480, type: 1
+Thread 1 is end, execution time: 0 s 67857221 ns
+Image processing execution time: 0 s 68190061 ns
+
+Thread count: 2, Image size: 640 x 480, type: 1
+Thread 1 is end, execution time: 0 s 33551205 ns
+Thread 2 is end, execution time: 0 s 33586811 ns
+Image processing execution time: 0 s 33845070 ns
+
+Thread count: 4, Image size: 640 x 480, type: 1
+Thread 1 is end, execution time: 0 s 16804998 ns
+Thread 2 is end, execution time: 0 s 16784703 ns
+Thread 3 is end, execution time: 0 s 16855482 ns
+Thread 4 is end, execution time: 0 s 16809831 ns
+Image processing execution time: 0 s 17111959 ns
+
+Thread count: 8, Image size: 640 x 480, type: 1
+Thread 1 is end, execution time: 0 s 9468307 ns
+Thread 2 is end, execution time: 0 s 9435880 ns
+Thread 3 is end, execution time: 0 s 10693753 ns
+Thread 4 is end, execution time: 0 s 10716598 ns
+Thread 5 is end, execution time: 0 s 10701852 ns
+Thread 6 is end, execution time: 0 s 10702072 ns
+Thread 7 is end, execution time: 0 s 10727326 ns
+Thread 8 is end, execution time: 0 s 10714409 ns
+Image processing execution time: 0 s 11197078 ns
+
+Thread count: 1, Image size: 640 x 480, type: 2
+Thread 1 is end, execution time: 0 s 69447188 ns
+Image processing execution time: 0 s 69754753 ns
+
+Thread count: 2, Image size: 640 x 480, type: 2
+Thread 1 is end, execution time: 0 s 35713765 ns
+Thread 2 is end, execution time: 0 s 35647626 ns
+Image processing execution time: 0 s 35968347 ns
+
+Thread count: 4, Image size: 640 x 480, type: 2
+Thread 1 is end, execution time: 0 s 21509128 ns
+Thread 2 is end, execution time: 0 s 19714397 ns
+Thread 3 is end, execution time: 0 s 19871656 ns
+Thread 4 is end, execution time: 0 s 20504492 ns
+Image processing execution time: 0 s 21972561 ns
+
+Thread count: 8, Image size: 640 x 480, type: 2
+Thread 1 is end, execution time: 0 s 12227081 ns
+Thread 2 is end, execution time: 0 s 12118878 ns
+Thread 3 is end, execution time: 0 s 10864191 ns
+Thread 4 is end, execution time: 0 s 10897678 ns
+Thread 5 is end, execution time: 0 s 11043633 ns
+Thread 6 is end, execution time: 0 s 10698650 ns
+Thread 7 is end, execution time: 0 s 12129530 ns
+Thread 8 is end, execution time: 0 s 12068391 ns
+Image processing execution time: 0 s 12614821 ns
+
