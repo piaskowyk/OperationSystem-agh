@@ -51,6 +51,7 @@ pthread_mutex_t carriageSeatsStateMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t passengerChangeStateMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t* passengerChangeStateCond;
 pthread_mutex_t stoppedCarriageCounterMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t waitForStartMutex = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_cond_t carriageLoadMeCond = PTHREAD_COND_INITIALIZER;
 pthread_cond_t releasingCarriageCond = PTHREAD_COND_INITIALIZER;
@@ -184,21 +185,12 @@ void *threadCarriage(void *data) {
                getTimestamp(),
                id);
 
-        //release passenger
-        for (int i = 0; i < carriageCapacity && tour != 0; i++) {
-            int passengerId = seatsInCarriage[index][--carriageSeatsState[index]];
-            setPassengerState(passengerId, 0);
-            waitForRelease = 1;
-            pthread_cond_broadcast(&passengerChangeStateCond[passengerId - 1]);
-            while (waitForRelease) {
-                pthread_cond_wait(&waitForReleaseCond, &loadCarriageMutex);
-            }
-        }
 
+        startClicker = -1;
         //load passengers
         while (carriageSeatsState[index] < carriageCapacity) {
             int passengerId = getFromPassengerQueue();
-            seatsInCarriage[index][carriageSeatsState[index] - 1] = passengerId;
+            seatsInCarriage[index][carriageSeatsState[index]] = passengerId;
             carriageSeatsState[index]++;
 
             setPassengerState(passengerId, 1);
@@ -208,23 +200,26 @@ void *threadCarriage(void *data) {
             while (waitForEntry) {
                 pthread_cond_wait(&waitForEntryCond, &loadCarriageMutex);
             }
-printf("mleko_carriage %d\n", carriageSeatsState[index]);
         }
 
         printf("\033[1;33m[%ld]>:\033[0m Carriage %d close door.\n",
                getTimestamp(),
                id);
 
+        pthread_mutex_lock(&waitForStartMutex);
+        startClicker = seatsInCarriage[actualLoadCarriage][rand() % carriageCapacity]+1;
         waitForStart = 1;
-        startClicker = seatsInCarriage[actualLoadCarriage][rand() % carriageCapacity];
+        pthread_mutex_unlock(&waitForStartMutex);
+
+        pthread_cond_broadcast(&waitForStartCond);
         while (waitForStart) {
-            pthread_cond_broadcast(&waitForStartCond);
             pthread_cond_wait(&waitForStartCond, &loadCarriageMutex);
         }
 
         printf("\033[1;33m[%ld]>:\033[0m Carriage %d start ride.\n",
                getTimestamp(),
                id);
+
 
         if(actualLoadCarriage == carriageCount){
             actualLoadCarriage = 0;
@@ -233,7 +228,20 @@ printf("mleko_carriage %d\n", carriageSeatsState[index]);
             actualLoadCarriage++;
         }
 
+        //release passenger
+        for (int i = 0; i < carriageCapacity; i++) {
+            int passengerId = seatsInCarriage[index][--carriageSeatsState[index]];
+            setPassengerState(passengerId, 0);
+            waitForRelease = 1;
+            pthread_cond_broadcast(&passengerChangeStateCond[passengerId - 1]);
+            while (waitForRelease) {
+printf("mleko_carriage %d,%d\n", id,passengerId);
+                pthread_cond_wait(&waitForReleaseCond, &loadCarriageMutex);
+            }
+        }
+
         pthread_mutex_unlock(&loadCarriageMutex);
+        pthread_cond_broadcast(&carriageLoadMeCond);
     }
 
     pthread_mutex_lock(&stoppedCarriageCounterMutex);
@@ -250,10 +258,8 @@ void *threadPassenger(void *data) {
     printf("\033[1;32m[%ld]>:\033[0m Create new passenger (%d) thread.\n", getTimestamp(), id);
     while(stoppedCarriageCounter < carriageCount) {
 
-//        pthread_mutex_lock(&queueMutex);
         //wait for entry to carriage
         pthread_mutex_lock(&passengerStateMutex);
-//printf("mleko_passenger %d\n", id);
         while (passengerState[id - 1] != 1) {
             if(stoppedCarriageCounter == carriageCount) {
                 return NULL;
@@ -261,24 +267,28 @@ void *threadPassenger(void *data) {
             pthread_cond_wait(&passengerChangeStateCond[id - 1], &passengerStateMutex);
         }
 
-        printf("\033[1;3sm[%ld]>:\033[0m Passenger %d entry to carriage %d/%d.\n",
+        printf("\033[1;32m[%ld]>:\033[0m Passenger %d entry to carriage %d/%d.\n",
                getTimestamp(),
                id,
                carriageSeatsState[actualLoadCarriage],
                carriageCapacity);
 
         pthread_mutex_unlock(&passengerStateMutex);
-        waitForEntry = 1;
+        waitForEntry = 0;
         pthread_cond_broadcast(&waitForEntryCond);
 
+
+
         //someone must press big red button with label start
-        startClicker = seatsInCarriage[actualLoadCarriage][rand() % carriageCapacity];
-        while (!waitForStart) {
-            pthread_cond_wait(&waitForStartCond, &queueMutex);
+        pthread_mutex_lock(&waitForStartMutex);
+        while (startClicker == -1) {
+            pthread_cond_wait(&waitForStartCond, &waitForStartMutex);
         }
+        pthread_mutex_unlock(&waitForStartMutex);
+
         if (startClicker == id) {
             waitForStart = 0;
-            printf("\033[1;3sm[%ld]>:\033[0m Passenger %d press button start.\n",
+            printf("\033[1;32m[%ld]>:\033[0m Passenger %d press button start.\n",
                    getTimestamp(),
                    id);
             pthread_cond_broadcast(&waitForStartCond);
@@ -287,41 +297,36 @@ void *threadPassenger(void *data) {
         //wait for release carriage
         pthread_mutex_lock(&passengerStateMutex);
         while (passengerState[id - 1] != 0) {
+printf("mleko_passenger %d,%d,%d\n",id, passengerState[id - 1],startClicker);
             pthread_cond_wait(&passengerChangeStateCond[id - 1], &passengerStateMutex);
         }
-        printf("\033[1;3sm[%ld]>:\033[0m Passenger %d released carriage %d/%d.\n",
+        printf("\033[1;32m[%ld]>:\033[0m Passenger %d released carriage %d/%d.\n",
                getTimestamp(),
                id,
                carriageSeatsState[actualLoadCarriage],
                carriageCapacity);
 
         pthread_mutex_unlock(&passengerStateMutex);
-            waitForRelease = 1;
+            waitForRelease = 0;
             pthread_cond_broadcast(&waitForReleaseCond);
         pthread_mutex_unlock(&passengerStateMutex);
 
-//        pthread_mutex_unlock(&queueMutex);
     }
 
     return NULL;
 }
 
 void addPassengerToQueue(int id) {
-//    pthread_mutex_lock(&queueMutex);
-
     if(queueFreeIndex < passengerCount) {
         passengerQueue[queueFreeIndex++] = id;
     }
     else {
         printErrorMessage("Queue is fully", 10);
     }
-
-//    pthread_mutex_unlock(&queueMutex);
 }
 
 int getFromPassengerQueue() {
     int passengerId = 0;
-//    pthread_mutex_lock(&queueMutex);
 
     if(passengerQueue[0] == 0) {
         printErrorMessage("Queue is Empty", 10);
@@ -334,17 +339,11 @@ int getFromPassengerQueue() {
         queueFreeIndex--;
     }
 
-//    pthread_mutex_unlock(&queueMutex);
-
     return passengerId;
 }
 
 void setPassengerState(int id, int state) {
-//    pthread_mutex_lock(&passengerStateMutex);
-
     passengerState[id - 1] = state;
-
-//    pthread_mutex_unlock(&passengerStateMutex);
 }
 
 void notifyAllAboutStoppedCarriage() {
