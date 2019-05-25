@@ -55,7 +55,6 @@ pthread_mutex_t releaseProcessMutex = PTHREAD_MUTEX_INITIALIZER;
 
 //ended counter
 int endedCarriage = 0;
-pthread_mutex_t endedCounterMutex = PTHREAD_MUTEX_INITIALIZER;
 
 int main(int argc, char *argv[], char *env[]) {
 
@@ -87,6 +86,10 @@ int main(int argc, char *argv[], char *env[]) {
         printErrorMessage("Too enough passenger", 1);
     }
 
+
+    //#######################################################################
+
+
     //array init
     passengerQueue = calloc(passengerCount, sizeof(int));
     for(int i = 0; i < passengerCount; i++) {
@@ -107,6 +110,8 @@ int main(int argc, char *argv[], char *env[]) {
         carriagesWaitCond[i] = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
     }
 
+
+    //#######################################################################
 
 
     //creating passenger threads
@@ -150,14 +155,39 @@ int main(int argc, char *argv[], char *env[]) {
         );
     }
 
+
+    //#######################################################################
+
+
     free(carriageKey);
     free(carriageID);
 
     free(passengerKey);
     free(passengerID);
 
-//    pthread_mutex_destroy(&queueMutex);
-//dokończyć zwalnianie pamięci i wszystkich muteksów i condidionali
+    free(passengerQueue);
+    free(passengerState);
+    free(carriageSeatsState);
+
+    for(int i = 0; i < passengerCount; i++) {
+        pthread_cond_destroy(&passengersWaitCond[i]);
+    }
+    free(passengersWaitCond);
+
+
+    for(int i = 0; i < carriageCount; i++) {
+        pthread_cond_destroy(&carriagesWaitCond[i]);
+    }
+    free(carriagesWaitCond);
+
+    pthread_mutex_destroy(&carriagesWaitMutex);\
+    pthread_mutex_destroy(&entryProcessMutex);
+    pthread_mutex_destroy(&waitForButtonPressMutex);
+    pthread_mutex_destroy(&releaseProcessMutex);
+
+    pthread_cond_destroy(&entryProcessCond);
+    pthread_cond_destroy(&waitForButtonPressCond);
+    pthread_cond_destroy(&releaseProcessCond);
 
     printf("\033[1;34m>:\033[0m END\n");
 
@@ -167,7 +197,7 @@ int main(int argc, char *argv[], char *env[]) {
 void *threadCarriage(void *data) {
     int id = *((int*)data);
     int* passengers = calloc(carriageCapacity, sizeof(int));
-    int free = 1;
+    int isFree = 1;
 
     printf("\033[1;33m[%ld]>:\033[0m Create new carriage (%d)\n",
             getTimestamp(),
@@ -194,7 +224,7 @@ void *threadCarriage(void *data) {
 
 
         //release passengers from carriage
-        if(!free) {
+        if(!isFree) {
             for (int k = 0; k < carriageCapacity; k++) {
                 pthread_mutex_lock(&releaseProcessMutex);
 
@@ -225,13 +255,12 @@ void *threadCarriage(void *data) {
             waitForEntry = 1;
             setPassengerState(passenger, IN_CARRIAGE);
             while (waitForEntry) {
-//            printf("-id:%d, pas:%d\n", id,passenger);
                 pthread_cond_wait(&entryProcessCond, &entryProcessMutex);
             }
 
             pthread_mutex_unlock(&entryProcessMutex);
         }
-        free = 0;
+        isFree = 0;
         printf("\033[1;33m[%ld]>:\033[0m Carriage %d close door.\n",
                getTimestamp(),
                id);
@@ -294,12 +323,13 @@ void *threadCarriage(void *data) {
         pthread_cond_broadcast(&carriagesWaitCond[actualCarriageID]);
     }
 
-    for(int i = 0; i < passengerCount; i++){
-//printf("ja się kończę %d, act: %d\n", id, actualCarriageID);
+    for(int i = 0; i < passengerCount; i++) {
         if(passengerState[i] == WAIT) {
             pthread_cond_broadcast(&passengersWaitCond[i]);
         }
     }
+
+    free(passengers);
 
     return NULL;
 }
@@ -381,27 +411,15 @@ void *threadPassenger(void *data) {
 }
 
 void addPassengerToQueue(int id) {
-//    printf("id: %d,%d\n", id,endOfPassengerQueue);
     if(endOfPassengerQueue < passengerCount) {
         passengerQueue[endOfPassengerQueue++] = id;
     }
     else {
         printErrorMessage("Queue is fully", 10);
     }
-//    printf("q:");
-//    for(int i = 0; i < passengerCount; i++) {
-//        printf("%d,", passengerQueue[i]);
-//    }
-//    printf("\n");
 }
 
 int getPassengerFromQueue() {
-//    printf("a:");
-//    for(int i = 0; i < passengerCount; i++) {
-//        printf("%d,", passengerQueue[i]);
-//    }
-//    printf("\n");
-
     int passengerId = -5;
 
     if(passengerQueue[0] == -1) {
@@ -416,11 +434,6 @@ int getPassengerFromQueue() {
         endOfPassengerQueue--;
     }
 
-//    printf("b:");
-//    for(int i = 0; i < passengerCount; i++) {
-//        printf("%d,", passengerQueue[i]);
-//    }
-//    printf("\n");
     return passengerId;
 }
 
