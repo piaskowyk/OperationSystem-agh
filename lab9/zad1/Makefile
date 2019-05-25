@@ -8,4 +8,4 @@ main: main.c
 	$(compile_command) main.o utils.o -o ./main -lpthread
 
 clean:
-	rm -rf *.o main result*
+	rm -rf *.o main
