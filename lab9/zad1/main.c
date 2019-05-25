@@ -37,7 +37,7 @@ int* carriageSeatsState;
 pthread_mutex_t carriagesWaitMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t* carriagesWaitCond;
 
-//entry process
+//entry process action
 int waitForEntry;
 pthread_cond_t entryProcessCond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t entryProcessMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -47,6 +47,15 @@ int waitForButtonPress;
 pthread_cond_t waitForButtonPressCond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t waitForButtonPressMutex = PTHREAD_MUTEX_INITIALIZER;
 int buttonPresser;
+
+//release process action
+int waitForRelease;
+pthread_cond_t releaseProcessCond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t releaseProcessMutex = PTHREAD_MUTEX_INITIALIZER;
+
+//ended counter
+int endedCarriage = 0;
+pthread_mutex_t endedCounterMutex = PTHREAD_MUTEX_INITIALIZER;
 
 int main(int argc, char *argv[], char *env[]) {
 
@@ -181,36 +190,56 @@ void *threadCarriage(void *data) {
                id);
 
 
+        //#######################################################################
 
+
+        //release passengers from carriage
         if(!free) {
-            //rozładuj wagonik
+            for (int k = 0; k < carriageCapacity; k++) {
+                pthread_mutex_lock(&releaseProcessMutex);
+
+                int passengerId = passengers[k];
+                carriageSeatsState[actualCarriageID]--;
+                addPassengerToQueue(passengerId);
+                setPassengerState(passengerId, WAIT);
+                waitForRelease = 1;
+                while (waitForRelease) {
+                    pthread_cond_wait(&releaseProcessCond, &releaseProcessMutex);
+                }
+
+                pthread_mutex_unlock(&releaseProcessMutex);
+            }
         }
 
+
+        //#######################################################################
 
 
         //get passengers from queue
         for(int k = 0; k < carriageCapacity; k++) {
             pthread_mutex_lock(&entryProcessMutex);
+
             int passenger = getPassengerFromQueue();
             passengers[k] = passenger;
             carriageSeatsState[actualCarriageID]++;
-
             waitForEntry = 1;
             setPassengerState(passenger, IN_CARRIAGE);
             while (waitForEntry) {
+//            printf("-id:%d, pas:%d\n", id,passenger);
                 pthread_cond_wait(&entryProcessCond, &entryProcessMutex);
             }
+
             pthread_mutex_unlock(&entryProcessMutex);
         }
         free = 0;
-
         printf("\033[1;33m[%ld]>:\033[0m Carriage %d close door.\n",
                getTimestamp(),
                id);
 
 
+        //#######################################################################
 
-        printf("aa %d\n", id);
+
         //wait for press big red button
         pthread_mutex_lock(&waitForButtonPressMutex);
         buttonPresser = passengers[rand() % carriageCapacity];
@@ -225,15 +254,51 @@ void *threadCarriage(void *data) {
                getTimestamp(),
                id);
 
-        if(actualCarriageID == carriageCount - 1){
-            actualCarriageID = 0;
+        if(i != tourCount - 1) {
+            if (actualCarriageID == carriageCount - 1) {
+                actualCarriageID = endedCarriage;
+            } else {
+                actualCarriageID++;
+            }
+            pthread_cond_broadcast(&carriagesWaitCond[actualCarriageID]);
         }
-        else {
-            actualCarriageID++;
-        }
-        pthread_cond_broadcast(&carriagesWaitCond[actualCarriageID]);
+
         pthread_mutex_unlock(&waitForButtonPressMutex);
 
+    }
+
+
+    //it was last run but i must release passengers from carriage :/
+    for(int k = 0; k < carriageCapacity; k++) {
+        pthread_mutex_lock(&releaseProcessMutex);
+
+        int passengerId = passengers[k];
+        carriageSeatsState[actualCarriageID]--;
+        addPassengerToQueue(passengerId);
+        setPassengerState(passengerId, WAIT);
+        waitForRelease = 1;
+        while (waitForRelease) {
+            pthread_cond_wait(&releaseProcessCond, &releaseProcessMutex);
+        }
+
+        pthread_mutex_unlock(&releaseProcessMutex);
+    }
+
+    endedCarriage++;
+    if (actualCarriageID == carriageCount - 1) {
+        actualCarriageID = endedCarriage;
+    } else {
+        actualCarriageID++;
+    }
+    if(actualCarriageID != carriageCount){
+        pthread_cond_broadcast(&carriagesWaitCond[actualCarriageID]);
+    }
+
+    for(int i = 0; i < passengerCount; i++){
+//printf("ja się kończę %d, act: %d\n", id, actualCarriageID);
+        if(passengerState[i] == WAIT) {
+            pthread_cond_broadcast(&passengersWaitCond[i]);
+        }
     }
 
     return NULL;
@@ -244,75 +309,118 @@ void *threadPassenger(void *data) {
     printf("\033[1;32m[%ld]>:\033[0m Create new passenger (%d) thread.\n", getTimestamp(), id);
 
 
+    while(endedCarriage < carriageCount) {
 
-    //default passenger state is WAIT
-    pthread_mutex_lock(&entryProcessMutex);
-    while (passengerState[id] == WAIT) {
-        pthread_cond_wait(&passengersWaitCond[id], &entryProcessMutex);
-    }
+        //default passenger state is WAIT
+        pthread_mutex_lock(&entryProcessMutex);
+        while (passengerState[id] == WAIT && endedCarriage < carriageCount) {
+            pthread_cond_wait(&passengersWaitCond[id], &entryProcessMutex);
+        }
 
-    //entry to carriage
-    printf("\033[1;32m[%ld]>:\033[0m Passenger %d entry to carriage (%d) %d/%d.\n",
-           getTimestamp(),
-           id,
-           actualCarriageID,
-           carriageSeatsState[actualCarriageID],
-           carriageCapacity);
+        if(endedCarriage >= carriageCount) {
+            pthread_mutex_unlock(&entryProcessMutex);
+            return NULL;
+        }
 
-    //notify carriage
-    waitForEntry = 0;
-    pthread_cond_broadcast(&entryProcessCond);
-    pthread_mutex_unlock(&entryProcessMutex);
-
-
-
-
-    //press big red button
-    pthread_mutex_lock(&waitForButtonPressMutex);
-    while (buttonPresser == -1) {
-        pthread_cond_wait(&waitForButtonPressCond, &waitForButtonPressMutex);
-    }
-
-    if (buttonPresser == id) {
-        waitForButtonPress = 0;
-        printf("\033[1;32m[%ld]>:\033[0m Passenger %d press button start.\n",
+        //entry to carriage
+        printf("\033[1;32m[%ld]>:\033[0m Passenger %d entry to carriage (%d) %d/%d.\n",
                getTimestamp(),
-               id);
-        pthread_cond_broadcast(&waitForButtonPressCond);
+               id,
+               actualCarriageID,
+               carriageSeatsState[actualCarriageID],
+               carriageCapacity);
+
+        //notify carriage
+        waitForEntry = 0;
+        pthread_cond_broadcast(&entryProcessCond);
+        pthread_mutex_unlock(&entryProcessMutex);
+
+
+        //#######################################################################
+
+
+        //press big red button
+        pthread_mutex_lock(&waitForButtonPressMutex);
+        while (buttonPresser == -1) {
+            pthread_cond_wait(&waitForButtonPressCond, &waitForButtonPressMutex);
+        }
+
+        if (buttonPresser == id) {
+            waitForButtonPress = 0;
+            printf("\033[1;32m[%ld]>:\033[0m Passenger %d press button start in carriage (%d).\n",
+                   getTimestamp(),
+                   id,
+                   actualCarriageID);
+            pthread_cond_broadcast(&waitForButtonPressCond);
+        }
+        pthread_mutex_unlock(&waitForButtonPressMutex);
+
+
+        //#######################################################################
+
+
+        //release carriage
+        pthread_mutex_lock(&releaseProcessMutex);
+        while (passengerState[id] == IN_CARRIAGE) {
+            pthread_cond_wait(&passengersWaitCond[id], &releaseProcessMutex);
+        }
+
+        printf("\033[1;32m[%ld]>:\033[0m Passenger %d released carriage (%d) %d/%d.\n",
+               getTimestamp(),
+               id,
+               actualCarriageID,
+               carriageSeatsState[actualCarriageID],
+               carriageCapacity);
+
+        waitForRelease = 0;
+        pthread_cond_broadcast(&releaseProcessCond);
+        pthread_mutex_unlock(&releaseProcessMutex);
     }
-    pthread_mutex_unlock(&waitForButtonPressMutex);
-
-
-
-
 
     return NULL;
 }
 
 void addPassengerToQueue(int id) {
+//    printf("id: %d,%d\n", id,endOfPassengerQueue);
     if(endOfPassengerQueue < passengerCount) {
         passengerQueue[endOfPassengerQueue++] = id;
     }
     else {
         printErrorMessage("Queue is fully", 10);
     }
+//    printf("q:");
+//    for(int i = 0; i < passengerCount; i++) {
+//        printf("%d,", passengerQueue[i]);
+//    }
+//    printf("\n");
 }
 
 int getPassengerFromQueue() {
-    int passengerId = 0;
+//    printf("a:");
+//    for(int i = 0; i < passengerCount; i++) {
+//        printf("%d,", passengerQueue[i]);
+//    }
+//    printf("\n");
+
+    int passengerId = -5;
 
     if(passengerQueue[0] == -1) {
         printErrorMessage("Queue is Empty", 10);
     }
     else {
         passengerId = passengerQueue[0];
-        for(int i = 1; i <= endOfPassengerQueue; i++) {
+        for(int i = 1; i < passengerCount; i++) {
             passengerQueue[i - 1] = passengerQueue[i];
         }
         passengerQueue[endOfPassengerQueue] = -1;
         endOfPassengerQueue--;
     }
 
+//    printf("b:");
+//    for(int i = 0; i < passengerCount; i++) {
+//        printf("%d,", passengerQueue[i]);
+//    }
+//    printf("\n");
     return passengerId;
 }
 
