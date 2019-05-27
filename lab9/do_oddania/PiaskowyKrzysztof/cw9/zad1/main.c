@@ -83,7 +83,7 @@ int main(int argc, char *argv[], char *env[]) {
     }
 
     if(passengerCount < carriageCount * carriageCapacity) {
-        printErrorMessage("Not enough passenger", 1);
+        printErrorMessage("Too enough passenger", 1);
     }
 
 
