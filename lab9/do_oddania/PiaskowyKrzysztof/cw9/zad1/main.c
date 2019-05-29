@@ -83,7 +83,7 @@ int main(int argc, char *argv[], char *env[]) {
     }
 
     if(passengerCount < carriageCount * carriageCapacity) {
-        printErrorMessage("Too enough passenger", 1);
+        printErrorMessage("Not enough passenger", 1);
     }
 
 
@@ -209,7 +209,7 @@ void *threadCarriage(void *data) {
         pthread_mutex_lock(&carriagesWaitMutex);
         while (actualCarriageID != id) {
             pthread_cond_wait(&carriagesWaitCond[id], &carriagesWaitMutex);
-            sleep(1);
+//            sleep(1);
         }
         pthread_mutex_unlock(&carriagesWaitMutex);
 
@@ -422,7 +422,7 @@ void addPassengerToQueue(int id) {
 int getPassengerFromQueue() {
     int passengerId = -5;
 
-    if(passengerQueue[0] == -1) {
+    if(passengerQueue[0] == -1 || endOfPassengerQueue <= 0) {
         printErrorMessage("Queue is Empty", 10);
     }
     else {
@@ -430,7 +430,7 @@ int getPassengerFromQueue() {
         for(int i = 1; i < passengerCount; i++) {
             passengerQueue[i - 1] = passengerQueue[i];
         }
-        passengerQueue[endOfPassengerQueue] = -1;
+        passengerQueue[endOfPassengerQueue-1] = -1;
         endOfPassengerQueue--;
     }
 

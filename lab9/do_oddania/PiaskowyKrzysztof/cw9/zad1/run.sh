@@ -4,5 +4,5 @@ make clean
 make main
 
 echo "Start testing:"
-./main 5 2 2 2
+./main 10 2 2 2
 echo "End"
