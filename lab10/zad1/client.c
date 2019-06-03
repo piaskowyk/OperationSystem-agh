@@ -25,6 +25,11 @@ struct ServerMessage getMessage(int socket);
 
 void handleSIGINT();
 
+void handleRequest(int socket, struct ServerMessage * message);
+
+struct ClientMessage workAction(struct ServerMessage *message);
+struct ClientMessage pingAction(struct ServerMessage * message);
+
 int main(int argc, char *argv[], char *env[]) {
 
     //signal handler init
@@ -121,13 +126,15 @@ int main(int argc, char *argv[], char *env[]) {
     }
 
     //send client name
-    struct ClientMessage message = {REGISTER_ACTION, 0, strlen(clientName), "", clientName};
-    sendMessage(socketFd, &message);
+    struct ClientMessage messageStart = {REGISTER_ACTION, 0, strlen(clientName), "", clientName};
+    sendMessage(socketFd, &messageStart);
 
-    while (running) {
-         struct ServerMessage message = getMessage(socketFd);  
-         printf("mleko\n");
-         printf("c: %d\n", message.code);
+    while(running) {
+        printf("Waiting...\n");
+
+        struct ServerMessage message = getMessage(socketFd);
+        handleRequest(socketFd, &message);
+        cleanServerMessage(&message);
     }
 
     close(socketFd);
@@ -135,7 +142,7 @@ int main(int argc, char *argv[], char *env[]) {
 }
 
 void sendMessage(int socket, const struct ClientMessage *message) {
-    write(socket, &message->type, sizeof(message->type));
+    write(socket, &message->type, sizeof(message->type)+6);
     write(socket, &message->dataLen, sizeof(message->dataLen));
     write(socket, &message->clientNameLen, sizeof(message->clientNameLen));
     if(message->dataLen > 0) {
@@ -180,4 +187,44 @@ struct ServerMessage getMessage(int socket) {
 void handleSIGINT() {
     printf("Receive signal SIGINT.\n");
     exit(0);
+}
+
+void handleRequest(int socket, struct ServerMessage * message) {
+
+    printf("Handle: %d\n", message->type);
+    struct ClientMessage response;
+
+    switch(message->type){
+        case WORK_ACTION: {
+//            response = workAction(message);
+        }
+        break;
+        case PING_ACTION: {
+            response = pingAction(message);
+            return;
+        }
+        default:
+            return;
+    }
+
+    sendMessage(socket, &response);
+}
+
+struct ClientMessage pingAction(struct ServerMessage * message) {
+    printf("PING action\n");
+
+    struct ClientMessage response;
+
+    response.clientName = calloc(strlen(clientName), sizeof(char));
+    memcpy(response.clientName, clientName, strlen(clientName));
+    response.clientNameLen = strlen(clientName);
+    response.type = PING_ACTION;
+    response.dataLen = 0;
+    response.data = NULL;
+
+    return response;
+}
+
+struct ClientMessage workAction(struct ServerMessage *message) {
+    //TODO
 }

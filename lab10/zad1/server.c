@@ -36,10 +36,10 @@ void *threadPing(void * data);
 void *threadInput(void * data);
 void handleRequest(int socket, struct ClientMessage * message);
 
-struct ServerMessage registerAction(struct ClientMessage * message);
-struct ServerMessage workDoneAction(struct ClientMessage * message);
+struct ServerMessage registerAction(int socket, struct ClientMessage * message);
+struct ServerMessage workAction(struct ClientMessage *message);
 struct ServerMessage logoutAction(struct ClientMessage * message);
-
+void pingAction(struct ClientMessage * message);
 
 int main(int argc, char *argv[], char *env[])
 {
@@ -58,6 +58,8 @@ int main(int argc, char *argv[], char *env[])
     for(int i = 0; i < MAX_CLIENTS; i++) {
         clients[i].free = 0;
         clients[i].name = NULL;
+        clients[i].status = 0;
+        clients[i].fd = 0;
     }
 
     int socketInternetFd, socketLocalFd;
@@ -183,6 +185,7 @@ int main(int argc, char *argv[], char *env[])
 
     //loop to receive data from client
     while(running) {
+//TODO: trzeba ogarnąć request o zamknięciu socketa
 
         printf("Polling for input...\n");
         event_count = epoll_wait(epollFd, events, MAX_CLIENTS, -1);
@@ -264,7 +267,6 @@ void sendMessage(int socket, const struct ServerMessage *message) {
     write(socket, &message->code, sizeof(message->code));
     write(socket, &message->type, sizeof(message->type));
     write(socket, &message->dataLen, sizeof(message->dataLen));
-    write(socket, &message->dataLen, sizeof(message->dataLen));
     if(message->dataLen > 0) {
         write(socket, message->data, message->dataLen * sizeof(char));
     }
@@ -276,36 +278,71 @@ void handleSIGINT() {
 }
 
 void *threadPing(void *data) {
-    //TODO
+    while(running) {
+        pthread_mutex_lock(&clientListMutex);
+        for(int i = 0; i < MAX_CLIENTS; i++) {
+            if(clients[i].name == NULL) {
+                continue;
+            }
+            printf("Send PING to %s,%d\n", clients[i].name, clients[i].status);
+            struct ServerMessage response;
+            response.code = DEFAULT_T;
+            response.dataLen = 0;
+            response.data = NULL;
+            response.type = PING_ACTION;
+
+            sendMessage(clients[i].fd, &response);
+        }
+        pthread_mutex_unlock(&clientListMutex);
+        sleep(2);
+
+        pthread_mutex_lock(&clientListMutex);
+        for(int i = 0; i < MAX_CLIENTS; i++) {
+            if(clients[i].name != NULL && clients[i].status == 0) {
+                free(clients[i].name);
+                clientCount--;
+                clients[i] = clients[clientCount];
+                free(clients[clientCount + 1].name);
+            }
+        }
+        pthread_mutex_unlock(&clientListMutex);
+        sleep(2);
+    }
 }
 
 void *threadInput(void *data) {
     //TODO
+
+    return NULL;
 }
 
 void handleRequest(int socket, struct ClientMessage * message){
 
-    printf("t: %d\n", message->type);
-    printf("nameLn: %d\n", message->clientNameLen);
-    printf("name: %s\n", message->clientName);
-    printf("dl: %d\n", message->dataLen);
-    printf("d: %s\n", message->data);
+//    printf("t: %d\n", message->type);
+//    printf("nameLn: %d\n", message->clientNameLen);
+//    printf("name: %s\n", message->clientName);
+//    printf("dl: %d\n", message->dataLen);
+//    printf("d: %s\n", message->data);
 
     struct ServerMessage response;
 
     switch(message->type){
         case REGISTER_ACTION: {
-            response = registerAction(message);
+            response = registerAction(socket, message);
         }
         break;
-        case WORK_DONE_ACTION: {
-            response = workDoneAction(message);
+        case WORK_ACTION: {
+            response = workAction(message);
         }
         break;
         case LOGOUT_ACTION: {
             response = logoutAction(message);
         }
         break;
+        case PING_ACTION: {
+            pingAction(message);
+            return;
+        }
         default:
             return;
     }
@@ -313,7 +350,7 @@ void handleRequest(int socket, struct ClientMessage * message){
     sendMessage(socket, &response);
 }
 
-struct ServerMessage registerAction(struct ClientMessage * message) {
+struct ServerMessage registerAction(int socket, struct ClientMessage * message) {
     struct ServerMessage response;
     response.type = REGISTER_ACTION;
     response.dataLen = 0;
@@ -330,7 +367,7 @@ struct ServerMessage registerAction(struct ClientMessage * message) {
     //check exist client
     int exist = 0;
     for(int i = 0; i < MAX_CLIENTS; i++) {
-        if(clients[i].name == message->clientName) {
+        if(clients[i].name != NULL && strcmp(clients[i].name, message->clientName) == 0) {
             exist = 1;
             break;
         }
@@ -344,9 +381,11 @@ struct ServerMessage registerAction(struct ClientMessage * message) {
         return response;
     }
 
-    clients[clientCount].free = 0;
+    clients[clientCount].status = 1;
+    clients[clientCount].fd = socket;
+    clients[clientCount].free = 1;
     clients[clientCount].name = calloc(message->clientNameLen + 1, sizeof(char));
-    memcpy(clients[clientCount].name, message->clientName, message->clientNameLen);
+    memcpy(clients[clientCount].name, message->clientName, message->clientNameLen * sizeof(char));
     clientCount++;
 
     pthread_mutex_unlock(&clientListMutex);
@@ -356,10 +395,25 @@ struct ServerMessage registerAction(struct ClientMessage * message) {
     return response;
 }
 
-struct ServerMessage workDoneAction(struct ClientMessage * message) {
+struct ServerMessage workAction(struct ClientMessage *message) {
     //TODO
 }
 
 struct ServerMessage logoutAction(struct ClientMessage * message) {
     //TODO
+}
+
+void pingAction(struct ClientMessage * message) {
+    printf("PING action\n");
+
+    if(message->clientName == NULL) {
+        return;
+    }
+
+    for(int i = 0; i < MAX_CLIENTS; i++) {
+        if(strcmp(message->clientName, clients[i].name) == 0) {
+            clients[i].status = 1;
+            break;
+        }
+    }
 }

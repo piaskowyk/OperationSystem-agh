@@ -1,8 +1,9 @@
 #pragma once
 
 #define REGISTER_ACTION 1
-#define WORK_DONE_ACTION 2
+#define WORK_ACTION 2
 #define LOGOUT_ACTION 3
+#define PING_ACTION 4
 
 #define SUCCESS 1
 #define ERROR 0
@@ -37,9 +38,12 @@ struct ServerMessage {
 struct Client {
     char * name;
     int free;
+    int status;
+    int fd;
 };
 
 void printErrorMessage(const char * message, int type);
 struct StringArray explode(char* string, long len, char delimer);
 void cleanStringArray(struct StringArray * items);
-void cleanClientMessage();
+void cleanClientMessage(struct ClientMessage * message);
+void cleanServerMessage(struct ServerMessage * message);

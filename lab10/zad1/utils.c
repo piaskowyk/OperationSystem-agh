@@ -80,3 +80,9 @@ void cleanClientMessage(struct ClientMessage * message) {
         free(message->clientName);
     }
 }
+
+void cleanServerMessage(struct ServerMessage * message) {
+    if(message->dataLen > 0) {
+        free(message->data);
+    }
+}
