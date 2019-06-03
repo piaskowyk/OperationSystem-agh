@@ -5,14 +5,17 @@
 #include <sys/types.h>
 #include <string.h>
 
-#include "utils.h"
-
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
 #include <sys/un.h>
+#include <arpa/inet.h>
+#include <signal.h>
+#include <pthread.h>
+
+#include "utils.h"
 
 #define MAX_CLIENTS 5
 #define READ_SIZE 10
@@ -21,13 +24,32 @@ unsigned int port = 0;
 char* localSocketName;
 int running = 1;
 
+struct ClientMessage getMessage(int socket);
+void cleanClientMessage();
+
+void handleSIGINT();
+
+void *threadPing(void *data);
+void *threadInput(void *data);
+void handleRequest(struct ClientMessage * message);
+
+void registerAction(struct ClientMessage * message);
+void workDoneAction(struct ClientMessage * message);
+void logoutAction(struct ClientMessage * message);
+
 int main(int argc, char *argv[], char *env[])
 {
     //debug
-//    close(socketInternetFd);
-//    close(socketLocalFd);
-    unlink("mleko.tmp");
+    unlink("../zad1/mleko.tmp");
     //end
+
+    //signal handler init
+    struct sigaction actionStruct;
+    actionStruct.sa_handler = handleSIGINT;
+    sigemptyset(&actionStruct.sa_mask);
+    sigaddset(&actionStruct.sa_mask, SIGINT);
+    actionStruct.sa_flags = 0;
+    sigaction(SIGINT, &actionStruct, NULL);
 
     int socketInternetFd, socketLocalFd;
     struct sockaddr_in serverInternetConf;
@@ -106,48 +128,180 @@ int main(int argc, char *argv[], char *env[])
 
     struct epoll_event event, events[MAX_CLIENTS];
     int epollFd = epoll_create1(0);
+    if(epollFd == -1) {
+        printErrorMessage("Epoll failed", 3);
+    }
     int event_count;
 
     if(epollFd == -1) {
         printErrorMessage("Failed to create epoll file descriptor", 4);
     }
 
-    event.events = EPOLLIN | EPOLLPRI;
+    event.events = EPOLLIN | EPOLLET;
 
-    event.data.fd = -socketInternetFd;
+    event.data.fd = socketInternetFd;
     if(epoll_ctl(epollFd, EPOLL_CTL_ADD, socketInternetFd, &event) == -1) {
         printErrorMessage("Failed to add file descriptor to epoll", 4);
     }
 
-    event.data.fd = -socketLocalFd;
+    event.data.fd = socketLocalFd;
     if(epoll_ctl(epollFd, EPOLL_CTL_ADD, socketLocalFd, &event) == -1) {
         printErrorMessage("Failed to add file descriptor to epoll", 4);
     }
 
-    char read_buffer[READ_SIZE + 1];
-    size_t bytes_read;
-    while(running)
-    {
-        printf("\nPolling for input...\n");
-        event_count = epoll_wait(epollFd, events, MAX_CLIENTS, 30000);
-        printf("%d ready events\n", event_count);
-        for(int i = 0; i < event_count; i++)
-        {
-            printf("Reading file descriptor '%d' -- ", events[i].data.fd);
-            bytes_read = read(events[i].data.fd, read_buffer, READ_SIZE);
-            printf("%zd bytes read.\n", bytes_read);
-            read_buffer[bytes_read] = '\0';
-            printf("Read '%s'\n", read_buffer);
+    //zrobić dwa wątki jeden do pingowania a drugi do wporadzania komend
+    //główny wątek służy to odbierania danych
 
-            if(!strncmp(read_buffer, "stop\n", 5))
-                running = 0;
-        }
+    pthread_t inputThread, pingThread;
+
+    //input thread
+    if(pthread_create(&inputThread, NULL, threadInput, NULL) != 0) {
+        printErrorMessage("Unable to create input thread", 6);
     }
 
+    if(pthread_detach(inputThread) != 0) {
+        printErrorMessage("Unable to detach input thread", 6);
+    }
 
+    //ping thread
+    if(pthread_create(&pingThread, NULL, threadPing, NULL) != 0) {
+        printErrorMessage("Unable to create ping thread", 6);
+    }
+
+    if(pthread_detach(pingThread) != 0) {
+        printErrorMessage("Unable to detach ping thread", 6);
+    }
+
+    //loop to receive data from client
+    while(running)
+    {
+        printf("Polling for input...\n");
+        event_count = epoll_wait(epollFd, events, MAX_CLIENTS, -1);
+
+        for (int i = 0; i < event_count; i++) {
+
+            if (events[i].data.fd == socketLocalFd || events[i].data.fd == socketInternetFd) {
+                printf("OK register\n");
+                int conn_sock = accept(events[i].data.fd, NULL, NULL);
+                if (conn_sock == -1) {
+                    printErrorMessage("Error while accept connection", 5);
+                }
+//                setnonblocking(conn_sock);
+                event.events = EPOLLIN | EPOLLET;
+                event.data.fd = conn_sock;
+                if (epoll_ctl(epollFd, EPOLL_CTL_ADD, conn_sock, &event) == -1) {
+                    printErrorMessage("Error epoll_ctl", 5);
+                }
+
+            } else {
+                struct ClientMessage message = getMessage(events[i].data.fd);
+                handleRequest(&message);
+                cleanClientMessage(&message);
+            }
+
+        }
+    }
 
 
     close(socketInternetFd);
     close(socketLocalFd);
     unlink(localSocketName);
+}
+
+struct ClientMessage getMessage(int socket) {
+    struct ClientMessage message;
+
+    if(read(socket, &message.type, sizeof(message.type)) != sizeof(message.type)){
+        printf("Error while reading data\n");
+    }
+    if(read(socket, &message.dataLen, sizeof(message.dataLen)) != sizeof(message.dataLen)){
+        printf("Error while reading data\n");
+    }
+    if(read(socket, &message.clientNameLen, sizeof(message.clientNameLen)) != sizeof(message.clientNameLen)){
+        printf("Error while reading data\n");
+    }
+
+    if(message.dataLen > 0) {
+        message.data = calloc(message.dataLen + 1, sizeof(char));
+        if(message.data == NULL){
+            printErrorMessage("Unable to allocate memory", 5);
+        }
+        if(read(socket, message.data, message.dataLen) != message.dataLen) {
+            printf("Error while reading data\n");
+        }
+    }
+    else {
+        message.data = NULL;
+    }
+
+    if(message.clientNameLen > 0) {
+        message.clientName = calloc(message.clientNameLen + 1, sizeof(char));
+        if(message.clientName == NULL){
+            printErrorMessage("Unable to allocate memory", 5);
+        }
+        if(read(socket, message.clientName, message.clientNameLen) != message.clientNameLen) {
+            printf("Error while reading data\n");
+        }
+        printf("pp:%s\n",message.clientName);
+    }
+    else {
+        message.clientName = NULL;
+    }
+
+    return message;
+}
+
+void cleanClientMessage(struct ClientMessage * message) {
+    if(message->dataLen > 0) {
+        free(message->data);
+    }
+    if(message->clientNameLen > 0) {
+        free(message->clientName);
+    }
+}
+
+void handleSIGINT() {
+    printf("Receive signal SIGINT.\n");
+    running = 1;
+}
+
+void *threadPing(void *data) {
+    //TODO
+}
+
+void *threadInput(void *data) {
+    //TODO
+}
+
+void handleRequest(struct ClientMessage * message){
+
+    printf("t: %d\n", message->type);
+    printf("nameLn: %d\n", message->clientNameLen);
+    printf("name: %s\n", message->clientName);
+    printf("dl: %d\n", message->dataLen);
+    printf("d: %s\n", message->data);
+
+    switch(message->type){
+        case REGISTER_ACTION: {
+
+        } break;
+        case WORK_DONE_ACTION: {
+
+        } break;
+        case LOGOUT_ACTION: {
+
+        } break;
+    }
+}
+
+void registerAction(struct ClientMessage * message) {
+    //TODO
+}
+
+void workDoneAction(struct ClientMessage * message) {
+    //TODO
+}
+
+void logoutAction(struct ClientMessage * message) {
+    //TODO
 }

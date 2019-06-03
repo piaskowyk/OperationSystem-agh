@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <signal.h>
 
 #include "utils.h"
 
@@ -18,7 +19,19 @@ char* clientName;
 int connectionType;
 char* connectionAddress;
 
+void sendMessage(int socket, const struct ClientMessage *message);
+
+void handleSIGINT();
+
 int main(int argc, char *argv[], char *env[]) {
+
+    //signal handler init
+    struct sigaction actionStruct;
+    actionStruct.sa_handler = handleSIGINT;
+    sigemptyset(&actionStruct.sa_mask);
+    sigaddset(&actionStruct.sa_mask, SIGINT);
+    actionStruct.sa_flags = 0;
+    sigaction(SIGINT, &actionStruct, NULL);
 
     if(argc < 4){
         printErrorMessage("Not enough arguments", 1);
@@ -105,8 +118,31 @@ int main(int argc, char *argv[], char *env[]) {
         cleanStringArray(&connection);
     }
 
-
-
-
+    //send client name
+    struct ClientMessage message;// = {1, 0, strlen(clientName), "", clientName};
+    message.type = 1;
+    message.dataLen = 1;
+    message.clientNameLen = 3;
+    message.data = "a";
+    message.clientName = "abc";
+    sendMessage(socketFd, &message);
     close(socketFd);
+    printf("END\n");
+}
+
+void sendMessage(int socket, const struct ClientMessage *message) {
+    write(socket, &message->type, sizeof(message->type));
+    write(socket, &message->dataLen, sizeof(message->dataLen));
+    write(socket, &message->clientNameLen, sizeof(message->clientNameLen));
+    if(message->dataLen > 0) {
+        write(socket, message->data, message->dataLen * sizeof(char));
+    }
+    if(message->clientNameLen > 0) {
+        write(socket, message->clientName, message->clientNameLen * sizeof(char));
+    }
+}
+
+void handleSIGINT() {
+    printf("Receive signal SIGINT.\n");
+    exit(0);
 }
