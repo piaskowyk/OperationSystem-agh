@@ -18,24 +18,28 @@
 #include "utils.h"
 
 #define MAX_CLIENTS 5
-#define READ_SIZE 10
 
 unsigned int port = 0;
 char* localSocketName;
 int running = 1;
+struct Client clients[MAX_CLIENTS];
+unsigned int clientCount = 0;
+
+pthread_mutex_t clientListMutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct ClientMessage getMessage(int socket);
-void cleanClientMessage();
+void sendMessage(int socket, const struct ServerMessage * message);
 
 void handleSIGINT();
 
-void *threadPing(void *data);
-void *threadInput(void *data);
-void handleRequest(struct ClientMessage * message);
+void *threadPing(void * data);
+void *threadInput(void * data);
+void handleRequest(int socket, struct ClientMessage * message);
 
-void registerAction(struct ClientMessage * message);
-void workDoneAction(struct ClientMessage * message);
-void logoutAction(struct ClientMessage * message);
+struct ServerMessage registerAction(struct ClientMessage * message);
+struct ServerMessage workDoneAction(struct ClientMessage * message);
+struct ServerMessage logoutAction(struct ClientMessage * message);
+
 
 int main(int argc, char *argv[], char *env[])
 {
@@ -50,6 +54,11 @@ int main(int argc, char *argv[], char *env[])
     sigaddset(&actionStruct.sa_mask, SIGINT);
     actionStruct.sa_flags = 0;
     sigaction(SIGINT, &actionStruct, NULL);
+
+    for(int i = 0; i < MAX_CLIENTS; i++) {
+        clients[i].free = 0;
+        clients[i].name = NULL;
+    }
 
     int socketInternetFd, socketLocalFd;
     struct sockaddr_in serverInternetConf;
@@ -173,8 +182,8 @@ int main(int argc, char *argv[], char *env[])
     }
 
     //loop to receive data from client
-    while(running)
-    {
+    while(running) {
+
         printf("Polling for input...\n");
         event_count = epoll_wait(epollFd, events, MAX_CLIENTS, -1);
 
@@ -195,14 +204,14 @@ int main(int argc, char *argv[], char *env[])
 
             } else {
                 struct ClientMessage message = getMessage(events[i].data.fd);
-                handleRequest(&message);
+                handleRequest(events[i].data.fd, &message);
                 cleanClientMessage(&message);
             }
 
         }
     }
 
-
+    pthread_mutex_destroy(&clientListMutex);
     close(socketInternetFd);
     close(socketLocalFd);
     unlink(localSocketName);
@@ -251,18 +260,19 @@ struct ClientMessage getMessage(int socket) {
     return message;
 }
 
-void cleanClientMessage(struct ClientMessage * message) {
+void sendMessage(int socket, const struct ServerMessage *message) {
+    write(socket, &message->code, sizeof(message->code));
+    write(socket, &message->type, sizeof(message->type));
+    write(socket, &message->dataLen, sizeof(message->dataLen));
+    write(socket, &message->dataLen, sizeof(message->dataLen));
     if(message->dataLen > 0) {
-        free(message->data);
-    }
-    if(message->clientNameLen > 0) {
-        free(message->clientName);
+        write(socket, message->data, message->dataLen * sizeof(char));
     }
 }
 
 void handleSIGINT() {
     printf("Receive signal SIGINT.\n");
-    running = 1;
+    running = 0;
 }
 
 void *threadPing(void *data) {
@@ -273,7 +283,7 @@ void *threadInput(void *data) {
     //TODO
 }
 
-void handleRequest(struct ClientMessage * message){
+void handleRequest(int socket, struct ClientMessage * message){
 
     printf("t: %d\n", message->type);
     printf("nameLn: %d\n", message->clientNameLen);
@@ -281,27 +291,75 @@ void handleRequest(struct ClientMessage * message){
     printf("dl: %d\n", message->dataLen);
     printf("d: %s\n", message->data);
 
+    struct ServerMessage response;
+
     switch(message->type){
         case REGISTER_ACTION: {
-
-        } break;
+            response = registerAction(message);
+        }
+        break;
         case WORK_DONE_ACTION: {
-
-        } break;
+            response = workDoneAction(message);
+        }
+        break;
         case LOGOUT_ACTION: {
-
-        } break;
+            response = logoutAction(message);
+        }
+        break;
+        default:
+            return;
     }
+
+    sendMessage(socket, &response);
 }
 
-void registerAction(struct ClientMessage * message) {
+struct ServerMessage registerAction(struct ClientMessage * message) {
+    struct ServerMessage response;
+    response.type = REGISTER_ACTION;
+    response.dataLen = 0;
+    response.data = NULL;
+
+    if(message->clientNameLen <= 0) {
+        response.code = INVALID_USER_NAME_T;
+
+        return response;
+    }
+
+    pthread_mutex_lock(&clientListMutex);
+
+    //check exist client
+    int exist = 0;
+    for(int i = 0; i < MAX_CLIENTS; i++) {
+        if(clients[i].name == message->clientName) {
+            exist = 1;
+            break;
+        }
+    }
+
+    if(exist) {
+        pthread_mutex_unlock(&clientListMutex);
+
+        response.code = USER_ALREADY_EXIST_T;
+
+        return response;
+    }
+
+    clients[clientCount].free = 0;
+    clients[clientCount].name = calloc(message->clientNameLen + 1, sizeof(char));
+    memcpy(clients[clientCount].name, message->clientName, message->clientNameLen);
+    clientCount++;
+
+    pthread_mutex_unlock(&clientListMutex);
+
+    response.code = USER_ADDED_T;
+
+    return response;
+}
+
+struct ServerMessage workDoneAction(struct ClientMessage * message) {
     //TODO
 }
 
-void workDoneAction(struct ClientMessage * message) {
-    //TODO
-}
-
-void logoutAction(struct ClientMessage * message) {
+struct ServerMessage logoutAction(struct ClientMessage * message) {
     //TODO
 }

@@ -71,3 +71,12 @@ void cleanStringArray(struct StringArray * items) {
     }
     free((*items).data);
 }
+
+void cleanClientMessage(struct ClientMessage * message) {
+    if(message->dataLen > 0) {
+        free(message->data);
+    }
+    if(message->clientNameLen > 0) {
+        free(message->clientName);
+    }
+}

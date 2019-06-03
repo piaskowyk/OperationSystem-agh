@@ -18,8 +18,10 @@
 char* clientName;
 int connectionType;
 char* connectionAddress;
+int running = 1;
 
 void sendMessage(int socket, const struct ClientMessage *message);
+struct ServerMessage getMessage(int socket);
 
 void handleSIGINT();
 
@@ -119,13 +121,15 @@ int main(int argc, char *argv[], char *env[]) {
     }
 
     //send client name
-    struct ClientMessage message;// = {1, 0, strlen(clientName), "", clientName};
-    message.type = 1;
-    message.dataLen = 1;
-    message.clientNameLen = 3;
-    message.data = "a";
-    message.clientName = "abc";
+    struct ClientMessage message = {REGISTER_ACTION, 0, strlen(clientName), "", clientName};
     sendMessage(socketFd, &message);
+
+    while (running) {
+         struct ServerMessage message = getMessage(socketFd);  
+         printf("mleko\n");
+         printf("c: %d\n", message.code);
+    }
+
     close(socketFd);
     printf("END\n");
 }
@@ -140,6 +144,37 @@ void sendMessage(int socket, const struct ClientMessage *message) {
     if(message->clientNameLen > 0) {
         write(socket, message->clientName, message->clientNameLen * sizeof(char));
     }
+}
+
+struct ServerMessage getMessage(int socket) {
+    struct ServerMessage message;
+
+    if(read(socket, &message.code, sizeof(message.code)) != sizeof(message.code)){
+        printf("Error while reading data\n");
+    }
+
+    if(read(socket, &message.type, sizeof(message.type)) != sizeof(message.type)){
+        printf("Error while reading data\n");
+    }
+
+    if(read(socket, &message.dataLen, sizeof(message.dataLen)) != sizeof(message.dataLen)){
+        printf("Error while reading data\n");
+    }
+
+    if(message.dataLen > 0) {
+        message.data = calloc(message.dataLen + 1, sizeof(char));
+        if(message.data == NULL){
+            printErrorMessage("Unable to allocate memory", 5);
+        }
+        if(read(socket, message.data, message.dataLen) != message.dataLen) {
+            printf("Error while reading data\n");
+        }
+    }
+    else {
+        message.data = NULL;
+    }
+
+    return message;
 }
 
 void handleSIGINT() {
