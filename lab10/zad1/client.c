@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <signal.h>
+#include <errno.h>
 
 #include "utils.h"
 
@@ -19,6 +20,7 @@ char* clientName;
 int connectionType;
 char* connectionAddress;
 int running = 1;
+int server = -1;
 
 void sendMessage(int socket, const struct ClientMessage *message);
 struct ServerMessage getMessage(int socket);
@@ -125,9 +127,19 @@ int main(int argc, char *argv[], char *env[]) {
         cleanStringArray(&connection);
     }
 
+    server = socketFd;
+
     //send client name
     struct ClientMessage messageStart = {REGISTER_ACTION, 0, strlen(clientName), "", clientName};
+    messageStart.type = REGISTER_ACTION;
+    messageStart.dataLen = 0;
+    messageStart.data = NULL;
+    messageStart.clientNameLen = strlen(clientName);
+    messageStart.clientName = calloc(messageStart.clientNameLen, sizeof(char));
+    memcpy(messageStart.clientName, clientName, messageStart.clientNameLen);
+
     sendMessage(socketFd, &messageStart);
+    cleanClientMessage(&messageStart);
 
     while(running) {
         printf("Waiting...\n");
@@ -142,7 +154,7 @@ int main(int argc, char *argv[], char *env[]) {
 }
 
 void sendMessage(int socket, const struct ClientMessage *message) {
-    write(socket, &message->type, sizeof(message->type)+6);
+    write(socket, &message->type, sizeof(message->type));
     write(socket, &message->dataLen, sizeof(message->dataLen));
     write(socket, &message->clientNameLen, sizeof(message->clientNameLen));
     if(message->dataLen > 0) {
@@ -157,15 +169,15 @@ struct ServerMessage getMessage(int socket) {
     struct ServerMessage message;
 
     if(read(socket, &message.code, sizeof(message.code)) != sizeof(message.code)){
-        printf("Error while reading data\n");
+        printf("Error while reading data %d\n", errno);
     }
 
     if(read(socket, &message.type, sizeof(message.type)) != sizeof(message.type)){
-        printf("Error while reading data\n");
+        printf("Error while reading data %d\n", errno);
     }
 
     if(read(socket, &message.dataLen, sizeof(message.dataLen)) != sizeof(message.dataLen)){
-        printf("Error while reading data\n");
+        printf("Error while reading data %d\n", errno);
     }
 
     if(message.dataLen > 0) {
@@ -174,7 +186,7 @@ struct ServerMessage getMessage(int socket) {
             printErrorMessage("Unable to allocate memory", 5);
         }
         if(read(socket, message.data, message.dataLen) != message.dataLen) {
-            printf("Error while reading data\n");
+            printf("Error while reading data %d\n", errno);
         }
     }
     else {
@@ -185,7 +197,20 @@ struct ServerMessage getMessage(int socket) {
 }
 
 void handleSIGINT() {
+    if(server < 0) {
+        return;
+    }
     printf("Receive signal SIGINT.\n");
+    struct ClientMessage message;
+    message.dataLen = 0;
+    message.data = NULL;
+    message.type = LOGOUT_ACTION;
+    message.clientNameLen = strlen(clientName);
+    message.clientName = calloc(message.clientNameLen, sizeof(char));
+    memcpy(message.clientName, clientName, message.clientNameLen);
+
+    sendMessage(server, &message);
+
     exit(0);
 }
 
@@ -196,13 +221,13 @@ void handleRequest(int socket, struct ServerMessage * message) {
 
     switch(message->type){
         case WORK_ACTION: {
-//            response = workAction(message);
+            response = workAction(message);
         }
         break;
         case PING_ACTION: {
             response = pingAction(message);
-            return;
         }
+        break;
         default:
             return;
     }
@@ -226,5 +251,14 @@ struct ClientMessage pingAction(struct ServerMessage * message) {
 }
 
 struct ClientMessage workAction(struct ServerMessage *message) {
-    //TODO
+    struct ClientMessage response;
+
+    response.clientName = calloc(strlen(clientName), sizeof(char));
+    memcpy(response.clientName, clientName, strlen(clientName));
+    response.clientNameLen = strlen(clientName);
+    response.type = PING_ACTION;
+    response.dataLen = 5;
+    response.data = "mleko";
+
+    return response;
 }

@@ -18,6 +18,7 @@
 #include "utils.h"
 
 #define MAX_CLIENTS 5
+#define MAX_COMMAND_LEN 500
 
 unsigned int port = 0;
 char* localSocketName;
@@ -37,8 +38,8 @@ void *threadInput(void * data);
 void handleRequest(int socket, struct ClientMessage * message);
 
 struct ServerMessage registerAction(int socket, struct ClientMessage * message);
-struct ServerMessage workAction(struct ClientMessage *message);
-struct ServerMessage logoutAction(struct ClientMessage * message);
+void workAction(struct ClientMessage *message);
+void logoutAction(struct ClientMessage * message);
 void pingAction(struct ClientMessage * message);
 
 int main(int argc, char *argv[], char *env[])
@@ -160,9 +161,7 @@ int main(int argc, char *argv[], char *env[])
         printErrorMessage("Failed to add file descriptor to epoll", 4);
     }
 
-    //zrobić dwa wątki jeden do pingowania a drugi do wporadzania komend
-    //główny wątek służy to odbierania danych
-
+    //creating program threads
     pthread_t inputThread, pingThread;
 
     //input thread
@@ -185,12 +184,15 @@ int main(int argc, char *argv[], char *env[])
 
     //loop to receive data from client
     while(running) {
-//TODO: trzeba ogarnąć request o zamknięciu socketa
 
-        printf("Polling for input...\n");
+//        printf("Polling for input...\n");
         event_count = epoll_wait(epollFd, events, MAX_CLIENTS, -1);
 
         for (int i = 0; i < event_count; i++) {
+
+            if(events[i].events == 17) {
+                continue;
+            }
 
             if (events[i].data.fd == socketLocalFd || events[i].data.fd == socketInternetFd) {
                 printf("OK register\n");
@@ -224,13 +226,13 @@ struct ClientMessage getMessage(int socket) {
     struct ClientMessage message;
 
     if(read(socket, &message.type, sizeof(message.type)) != sizeof(message.type)){
-        printf("Error while reading data\n");
+        printf("Error while reading data 1\n");
     }
     if(read(socket, &message.dataLen, sizeof(message.dataLen)) != sizeof(message.dataLen)){
-        printf("Error while reading data\n");
+        printf("Error while reading data 2\n");
     }
     if(read(socket, &message.clientNameLen, sizeof(message.clientNameLen)) != sizeof(message.clientNameLen)){
-        printf("Error while reading data\n");
+        printf("Error while reading data 3\n");
     }
 
     if(message.dataLen > 0) {
@@ -238,8 +240,9 @@ struct ClientMessage getMessage(int socket) {
         if(message.data == NULL){
             printErrorMessage("Unable to allocate memory", 5);
         }
+
         if(read(socket, message.data, message.dataLen) != message.dataLen) {
-            printf("Error while reading data\n");
+            printf("Error while reading data 4\n");
         }
     }
     else {
@@ -251,10 +254,10 @@ struct ClientMessage getMessage(int socket) {
         if(message.clientName == NULL){
             printErrorMessage("Unable to allocate memory", 5);
         }
+
         if(read(socket, message.clientName, message.clientNameLen) != message.clientNameLen) {
-            printf("Error while reading data\n");
+            printf("Error while reading data 5\n");
         }
-        printf("pp:%s\n",message.clientName);
     }
     else {
         message.clientName = NULL;
@@ -280,11 +283,11 @@ void handleSIGINT() {
 void *threadPing(void *data) {
     while(running) {
         pthread_mutex_lock(&clientListMutex);
-        for(int i = 0; i < MAX_CLIENTS; i++) {
-            if(clients[i].name == NULL) {
+        for(int i = 0; i < clientCount; i++) {
+            if(clients[i].name == NULL && clients[i].status == 1) {
                 continue;
             }
-            printf("Send PING to %s,%d\n", clients[i].name, clients[i].status);
+//            printf("Send PING to %s, %d\n", clients[i].name, clients[i].status);
             struct ServerMessage response;
             response.code = DEFAULT_T;
             response.dataLen = 0;
@@ -306,23 +309,72 @@ void *threadPing(void *data) {
             }
         }
         pthread_mutex_unlock(&clientListMutex);
-        sleep(2);
+        sleep(10);
     }
 }
 
 void *threadInput(void *data) {
-    //TODO
+
+    while(running){
+        char* command = calloc(MAX_COMMAND_LEN, sizeof(char));
+        printf(">> ");
+        int oneChar = 0;
+        char *ptr = command;
+        while ((oneChar = fgetc(stdin)) != '\n') {
+            if(command + MAX_COMMAND_LEN > ptr) {
+                (*ptr++) = (char)oneChar;
+            }
+            else {
+                command[MAX_COMMAND_LEN-1] = '\0';
+            }
+        }
+
+        if(strcmp(command, "") == 0) {
+            continue;
+        }
+
+        printf("Opening file: %s\n", command);
+
+        FILE* file = fopen(command, "r+");
+        if(file == NULL) {
+            printf("File '%s' not exist\n", command);
+        }
+        long fileSize = 0;
+        fseek(file, 0, SEEK_END);
+        fileSize = ftell(file);
+        rewind(file);
+
+        char* content = calloc(fileSize, sizeof(char));
+        fread(content, sizeof(char), fileSize, file);
+
+        struct ServerMessage response;
+        response.dataLen = fileSize;
+        response.data = calloc(fileSize, sizeof(char));
+        memcpy(response.data, content, fileSize * sizeof(char));
+        response.code = DEFAULT_T;
+        response.type = WORK_ACTION;
+
+        //select client and send
+        int clientId = 0;
+        pthread_mutex_lock(&clientListMutex);
+        for(int i = 0; i < MAX_CLIENTS; i++) {
+            if(clients[i].name != NULL && clients[i].free == 1) {
+                clientId = i;
+                break;
+            }
+        }
+        sendMessage(clients[clientId].fd, &response);
+        pthread_mutex_unlock(&clientListMutex);
+
+        cleanServerMessage(&response);
+        free(command);
+        free(content);
+    }
 
     return NULL;
 }
 
 void handleRequest(int socket, struct ClientMessage * message){
-
-//    printf("t: %d\n", message->type);
-//    printf("nameLn: %d\n", message->clientNameLen);
-//    printf("name: %s\n", message->clientName);
-//    printf("dl: %d\n", message->dataLen);
-//    printf("d: %s\n", message->data);
 
     struct ServerMessage response;
 
@@ -332,11 +384,12 @@ void handleRequest(int socket, struct ClientMessage * message){
         }
         break;
         case WORK_ACTION: {
-            response = workAction(message);
+            workAction(message);
+            return;
         }
-        break;
         case LOGOUT_ACTION: {
-            response = logoutAction(message);
+            logoutAction(message);
+            return;
         }
         break;
         case PING_ACTION: {
@@ -395,16 +448,67 @@ struct ServerMessage registerAction(int socket, struct ClientMessage * message) 
     return response;
 }
 
-struct ServerMessage workAction(struct ClientMessage *message) {
-    //TODO
+void workAction(struct ClientMessage *message) {
+    if(message->dataLen <= 0 || message->clientNameLen <= 0) {
+        printf("Client request format error.\n");
+        return;
+    }
+
+    int clientId = -1;
+    pthread_mutex_lock(&clientListMutex);
+    for(int i = 0; i < MAX_CLIENTS; i++) {
+        if(strcmp(clients[i].name, message->clientName) == 0 && clients[i].free == 1) {
+            clientId = i;
+            break;
+        }
+    }
+
+    if(clientId == -1) {
+        pthread_mutex_unlock(&clientListMutex);
+        printf("Client '%s' not exist", message->clientName);
+        return;
+    }
+
+    //TODO ma wypisywać więcej wartości
+    printf("Client '%s' count ", message->clientName);
+
+    clients[clientId].free = 1;
+
+    pthread_mutex_unlock(&clientListMutex);
 }
 
-struct ServerMessage logoutAction(struct ClientMessage * message) {
-    //TODO
+void logoutAction(struct ClientMessage * message) {
+    if(message->clientNameLen <= 0 || message->clientName == NULL) {
+        printf("Client request format error.\n");
+        return;
+    }
+
+    int clientId = -1;
+    pthread_mutex_lock(&clientListMutex);
+    for(int i = 0; i < MAX_CLIENTS; i++) {
+        if(strcmp(clients[i].name, message->clientName) == 0 && clients[i].free == 1) {
+            clientId = i;
+            break;
+        }
+    }
+
+    if(clientId == -1) {
+        pthread_mutex_unlock(&clientListMutex);
+        printf("Client '%s' not exist", message->clientName);
+        return;
+    }
+
+    free(clients[clientId].name);
+    clientCount--;
+    clients[clientId] = clients[clientCount];
+    free(clients[clientCount + 1].name);
+
+    pthread_mutex_unlock(&clientListMutex);
+
 }
 
 void pingAction(struct ClientMessage * message) {
-    printf("PING action\n");
+//    printf("PING action\n");
 
     if(message->clientName == NULL) {
         return;
