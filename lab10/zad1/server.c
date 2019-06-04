@@ -353,7 +353,8 @@ void *threadInput(void *data) {
         memcpy(response.data, content, fileSize * sizeof(char));
         response.code = DEFAULT_T;
         response.type = WORK_ACTION;
-
+//printf("%s\n", response.data);
+//printf("%d", response.dataLen);
         //select client and send
         int clientId = 0;
         pthread_mutex_lock(&clientListMutex);
@@ -470,7 +471,7 @@ void workAction(struct ClientMessage *message) {
     }
 
     //TODO ma wypisywać więcej wartości
-    printf("Client '%s' count ", message->clientName);
+    printf("Client '%s' count \n", message->clientName);
 
     clients[clientId].free = 1;
 
@@ -504,7 +505,7 @@ void logoutAction(struct ClientMessage * message) {
     free(clients[clientCount + 1].name);
 
     pthread_mutex_unlock(&clientListMutex);
-
+    printf("Log out client\n");
 }
 
 void pingAction(struct ClientMessage * message) {

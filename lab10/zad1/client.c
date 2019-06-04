@@ -251,12 +251,19 @@ struct ClientMessage pingAction(struct ServerMessage * message) {
 }
 
 struct ClientMessage workAction(struct ServerMessage *message) {
+
+    //TODO
+
+    //analiza tekstu
+    
+    //obliczanie rozmiaru struktury
+
     struct ClientMessage response;
 
     response.clientName = calloc(strlen(clientName), sizeof(char));
     memcpy(response.clientName, clientName, strlen(clientName));
     response.clientNameLen = strlen(clientName);
-    response.type = PING_ACTION;
+    response.type = WORK_ACTION;
     response.dataLen = 5;
     response.data = "mleko";
 

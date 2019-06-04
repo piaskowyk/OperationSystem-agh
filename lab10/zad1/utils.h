@@ -42,6 +42,14 @@ struct Client {
     int fd;
 };
 
+struct WordCount {
+    int taskId;
+    int allWord;
+    int uniqWordsCount;
+    char** uniqWords;
+    int* uniqWordsLen;
+};
+
 void printErrorMessage(const char * message, int type);
 struct StringArray explode(char* string, long len, char delimer);
 void cleanStringArray(struct StringArray * items);
