@@ -72,7 +72,7 @@ int main(int argc, char *argv[], char *env[]) {
     memset(&socketLocalConf, 0, sizeof(socketLocalConf));
 
     if(connectionType == LOCAL_CONNECTION) {
-        socketFd = socket(AF_UNIX, SOCK_STREAM, 0);
+        socketFd = socket(AF_UNIX, SOCK_DGRAM, 0);
         if (socketFd == -1) {
             printErrorMessage("Local socket creation failed", 3);
         }
@@ -100,7 +100,7 @@ int main(int argc, char *argv[], char *env[]) {
             printErrorMessage("Invalid IP address", 4);
         }
 
-        socketFd = socket(AF_INET, SOCK_STREAM, 0);
+        socketFd = socket(AF_INET, SOCK_DGRAM, 0);
         if (socketFd == -1) {
             printErrorMessage("Internet socket creation failed", 4);
         }
