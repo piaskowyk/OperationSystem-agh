@@ -84,7 +84,7 @@ int main(int argc, char *argv[], char *env[])
     }
 
     //create internet socket connection
-    socketInternetFd = socket(AF_INET, SOCK_DGRAM, 0);
+    socketInternetFd = socket(AF_INET, SOCK_STREAM, 0);
     if (socketInternetFd == -1) {
         printErrorMessage("Internet socket creation failed", 2);
     }
@@ -114,7 +114,7 @@ int main(int argc, char *argv[], char *env[])
     }
 
     //create local socket connection
-    socketLocalFd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    socketLocalFd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (socketLocalFd == -1) {
         printErrorMessage("Local socket creation failed", 3);
     }

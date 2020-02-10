@@ -1,2 +1,3 @@
-# sysOpki <3 <3 <3
-sysopowanko zapraszam
+# Operation Systems
+
+Solutions task from my academic subject "operating system", contains UNIX mechanisms.
